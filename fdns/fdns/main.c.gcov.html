@@ -1,0 +1,367 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/main.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - main.c<span style="font-size: 80%;"> (source / <a href="main.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">147</td>
+            <td class="headerCovTableEntry">172</td>
+            <td class="headerCovTableEntryMed">85.5 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      20 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      21 </span>            : int arg_argc = 0;
+<span class="lineNum">      22 </span>            : int arg_debug = 0;
+<span class="lineNum">      23 </span>            : int arg_resolvers = RESOLVERS_CNT_DEFAULT;
+<span class="lineNum">      24 </span>            : int arg_id = -1;
+<span class="lineNum">      25 </span>            : int arg_fd = -1;
+<span class="lineNum">      26 </span>            : int arg_nofilter = 0;
+<span class="lineNum">      27 </span>            : int arg_ipv6 = 0;
+<span class="lineNum">      28 </span>            : int arg_daemonize = 0;
+<span class="lineNum">      29 </span>            : int arg_allow_all_queries = 0;
+<span class="lineNum">      30 </span>            : char *arg_server = NULL;
+<span class="lineNum">      31 </span>            : char *arg_proxy_addr = NULL;
+<span class="lineNum">      32 </span>            : int arg_proxy_addr_any = 0;
+<span class="lineNum">      33 </span>            : char *arg_certfile = NULL;
+<span class="lineNum">      34 </span>            : int arg_test_hosts = 0;
+<span class="lineNum">      35 </span>            : char *arg_zone = NULL;
+<span class="lineNum">      36 </span>            : int arg_cache_ttl = CACHE_TTL_DEFAULT;
+<span class="lineNum">      37 </span>            : int arg_allow_local_doh = 0;
+<span class="lineNum">      38 </span>            : char *arg_whitelist_file = NULL;
+<span class="lineNum">      39 </span>            : int arg_fallback_only = 0;
+<span class="lineNum">      40 </span>            : 
+<a name="41"><span class="lineNum">      41 </span>            : Stats stats;</a>
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span><span class="lineCov">          8 : static void usage(void) {</span>
+<span class="lineNum">      44 </span><span class="lineCov">          8 :         printf(&quot;fdns - DNS over HTTPS proxy server\n\n&quot;);</span>
+<span class="lineNum">      45 </span><span class="lineCov">          8 :         printf(&quot;Usage:\n&quot;);</span>
+<span class="lineNum">      46 </span><span class="lineCov">          8 :         printf(&quot;    start the server:     fdns [options]\n&quot;);</span>
+<span class="lineNum">      47 </span><span class="lineCov">          8 :         printf(&quot;    monitor the server:   fdns --monitor\n&quot;);</span>
+<span class="lineNum">      48 </span><span class="lineCov">          8 :         printf(&quot;\n&quot;);</span>
+<span class="lineNum">      49 </span><span class="lineCov">          8 :         printf(&quot;Options:\n&quot;);</span>
+<span class="lineNum">      50 </span><span class="lineCov">          8 :         printf(&quot;    --allow-all-queries - allow all DNS query types; by default only\n&quot;</span>
+<span class="lineNum">      51 </span>            :                &quot;\tA queries are allowed.\n&quot;);
+<span class="lineNum">      52 </span><span class="lineCov">          8 :         printf(&quot;    --allow-local-doh - allow applications on local network to connect to DoH\n&quot;</span>
+<span class="lineNum">      53 </span>            :                &quot;\tservices; disabled by default.\n&quot;);
+<span class="lineNum">      54 </span><span class="lineCov">          8 :         printf(&quot;    --cache-ttl=seconds - change DNS cache TTL (default %ds).\n&quot;, CACHE_TTL_DEFAULT);</span>
+<span class="lineNum">      55 </span><span class="lineCov">          8 :         printf(&quot;    --certfile=filename - SSL certificate file in PEM format.\n&quot;);</span>
+<span class="lineNum">      56 </span><span class="lineCov">          8 :         printf(&quot;    --daemonize - detach from the controlling terminal and run as a Unix\n&quot;</span>
+<span class="lineNum">      57 </span>            :                &quot;\tdaemon.\n&quot;);
+<span class="lineNum">      58 </span><span class="lineCov">          8 :         printf(&quot;    --debug - print debug messages.\n&quot;);</span>
+<span class="lineNum">      59 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">      60 </span><span class="lineCov">          8 :         printf(&quot;    --fallback-only - operate strictly in fallback mode.\n&quot;);</span>
+<span class="lineNum">      61 </span>            : #endif
+<span class="lineNum">      62 </span><span class="lineCov">          8 :         printf(&quot;    --forwarder=domain@address - conditional forwarding to a different DNS\n&quot;</span>
+<span class="lineNum">      63 </span>            :                 &quot;\tserver.\n&quot;);
+<span class="lineNum">      64 </span><span class="lineCov">          8 :         printf(&quot;    --help, -?, -h - show this help screen.\n&quot;);</span>
+<span class="lineNum">      65 </span><span class="lineCov">          8 :         printf(&quot;    --ipv6 - allow AAAA requests.\n&quot;);</span>
+<span class="lineNum">      66 </span><span class="lineCov">          8 :         printf(&quot;    --list - list DoH servers.\n&quot;);</span>
+<span class="lineNum">      67 </span><span class="lineCov">          8 :         printf(&quot;    --list=server-name|tag|all - list DoH servers.\n&quot;);</span>
+<span class="lineNum">      68 </span><span class="lineCov">          8 :         printf(&quot;    --monitor - monitor statistics for the default instance.\n&quot;);</span>
+<span class="lineNum">      69 </span><span class="lineCov">          8 :         printf(&quot;    --monitor=proxy-address - monitor statistics for a specific instance\n&quot;</span>
+<span class="lineNum">      70 </span>            :                  &quot;\tof FDNS.\n&quot;);
+<span class="lineNum">      71 </span><span class="lineCov">          8 :         printf(&quot;    --nofilter - no DNS request filtering.\n&quot;);</span>
+<span class="lineNum">      72 </span><span class="lineCov">          8 :         printf(&quot;    --proxies - list all running instances of FDNS\n&quot;);</span>
+<span class="lineNum">      73 </span><span class="lineCov">          8 :         printf(&quot;    --proxy-addr=address - configure the IP address the proxy listens on for\n&quot;</span>
+<span class="lineNum">      74 </span>            :                &quot;\tDNS queries coming from the local clients. The default is 127.1.1.1.\n&quot;);
+<span class="lineNum">      75 </span><span class="lineCov">          8 :         printf(&quot;    --proxy-addr-any - listen on all available network interfaces.\n&quot;);</span>
+<span class="lineNum">      76 </span><span class="lineCov">          8 :         printf(&quot;    --resolvers=number - the number of resolver processes, between %d and %d,\n&quot;</span>
+<span class="lineNum">      77 </span>            :                &quot;\tdefault %d.\n&quot;,
+<span class="lineNum">      78 </span>            :                RESOLVERS_CNT_MIN, RESOLVERS_CNT_MAX, RESOLVERS_CNT_DEFAULT);
+<span class="lineNum">      79 </span><span class="lineCov">          8 :         printf(&quot;    --server=server-name|tag|all - DoH server to connect to.\n&quot;);</span>
+<span class="lineNum">      80 </span><span class="lineCov">          8 :         printf(&quot;    --test-hosts - test the domains in /etc/fdns/hosts file.\n&quot;);</span>
+<span class="lineNum">      81 </span><span class="lineCov">          8 :         printf(&quot;    --test-server - test the DoH servers in your current zone.\n&quot;);</span>
+<span class="lineNum">      82 </span><span class="lineCov">          8 :         printf(&quot;    --test-server=server-name|tag|all - test DoH servers.\n&quot;);</span>
+<span class="lineNum">      83 </span><span class="lineCov">          8 :         printf(&quot;    --test-url=URL - check if URL is dropped.\n&quot;);</span>
+<span class="lineNum">      84 </span><span class="lineCov">          8 :         printf(&quot;    --test-url-list - check all URLs form stdin.\n&quot;);</span>
+<span class="lineNum">      85 </span><span class="lineCov">          8 :         printf(&quot;    --version - print program version and exit.\n&quot;);</span>
+<span class="lineNum">      86 </span><span class="lineCov">          8 :         printf(&quot;    --whitelist=domain - whitelisting domains.\n&quot;);</span>
+<span class="lineNum">      87 </span><span class="lineCov">          8 :         printf(&quot;    --whitelist-file=filename - whitelisting domains.\n&quot;);</span>
+<span class="lineNum">      88 </span><span class="lineCov">          8 :         printf(&quot;    --zone=zone-name - set a different geographical zone.\n&quot;);</span>
+<span class="lineNum">      89 </span><span class="lineCov">          8 :         printf(&quot;\n&quot;);</span>
+<a name="90"><span class="lineNum">      90 </span><span class="lineCov">          8 : }</span></a>
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span><span class="lineCov">        167 : int main(int argc, char **argv) {</span>
+<span class="lineNum">      93 </span>            :         // init
+<span class="lineNum">      94 </span><span class="lineCov">        167 :         arg_argc = argc;</span>
+<span class="lineNum">      95 </span><span class="lineCov">        167 :         memset(&amp;stats, 0, sizeof(stats));</span>
+<span class="lineNum">      96 </span><span class="lineCov">        167 :         memset(encrypted, 0, sizeof(encrypted));</span>
+<span class="lineNum">      97 </span><span class="lineCov">        167 :         filter_init();</span>
+<span class="lineNum">      98 </span><span class="lineCov">        167 :         cache_init();</span>
+<span class="lineNum">      99 </span><span class="lineCov">        167 :         srand(time(NULL));</span>
+<span class="lineNum">     100 </span>            : 
+<span class="lineNum">     101 </span>            :         // processing: daemonize, zone, debug
+<span class="lineNum">     102 </span><span class="lineCov">        167 :         if (argc != 1) {</span>
+<span class="lineNum">     103 </span>            :                 int i;
+<span class="lineNum">     104 </span><span class="lineCov">        596 :                 for (i = 1; i &lt; argc; i++) {</span>
+<span class="lineNum">     105 </span><span class="lineCov">        438 :                         if (strcmp(argv[i], &quot;--daemonize&quot;) == 0) {</span>
+<span class="lineNum">     106 </span><span class="lineCov">          7 :                                 daemonize();</span>
+<span class="lineNum">     107 </span><span class="lineCov">          7 :                                 arg_daemonize = 1;</span>
+<span class="lineNum">     108 </span>            :                         }
+<span class="lineNum">     109 </span><span class="lineCov">        431 :                         else if (strncmp(argv[i], &quot;--zone=&quot;, 7) == 0) {</span>
+<span class="lineNum">     110 </span><span class="lineCov">          2 :                                 arg_zone = strdup(argv[i] + 7);</span>
+<span class="lineNum">     111 </span><span class="lineCov">          2 :                                 if (!arg_zone)</span>
+<span class="lineNum">     112 </span><span class="lineNoCov">          0 :                                         errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     113 </span>            :                         }
+<span class="lineNum">     114 </span><span class="lineCov">        429 :                         else if (strcmp(argv[i], &quot;--debug&quot;) == 0)</span>
+<span class="lineNum">     115 </span><span class="lineCov">         11 :                                 arg_debug = 1;</span>
+<span class="lineNum">     116 </span>            :                 }
+<span class="lineNum">     117 </span>            :         }
+<span class="lineNum">     118 </span>            : 
+<span class="lineNum">     119 </span>            : 
+<span class="lineNum">     120 </span>            :         // parse command line arguments
+<span class="lineNum">     121 </span><span class="lineCov">        167 :         if (argc != 1) {</span>
+<span class="lineNum">     122 </span>            :                 // parse arguments
+<span class="lineNum">     123 </span>            :                 int i;
+<span class="lineNum">     124 </span><span class="lineCov">        554 :                 for (i = 1; i &lt; argc; i++) {</span>
+<span class="lineNum">     125 </span><span class="lineCov">        437 :                         if (strcmp(argv[i], &quot;--help&quot;) == 0 ||</span>
+<span class="lineNum">     126 </span><span class="lineCov">        430 :                             strcmp(argv[i], &quot;-?&quot;) == 0 ||</span>
+<span class="lineNum">     127 </span><span class="lineCov">        429 :                             strcmp(argv[i], &quot;-h&quot;) == 0) {</span>
+<span class="lineNum">     128 </span><span class="lineCov">          8 :                                 usage();</span>
+<span class="lineNum">     129 </span><span class="lineCov">          8 :                                 return 0;</span>
+<span class="lineNum">     130 </span>            :                         }
+<span class="lineNum">     131 </span><span class="lineCov">        429 :                         else if (strcmp(argv[i], &quot;--version&quot;) == 0) {</span>
+<span class="lineNum">     132 </span><span class="lineCov">          1 :                                 printf(&quot;fdns version %s\n&quot;, VERSION);</span>
+<span class="lineNum">     133 </span><span class="lineCov">          1 :                                 return 0;</span>
+<span class="lineNum">     134 </span>            :                         }
+<span class="lineNum">     135 </span>            : 
+<span class="lineNum">     136 </span>            :                         // already processed
+<span class="lineNum">     137 </span><span class="lineCov">        428 :                         else if (strcmp(argv[i], &quot;--debug&quot;) == 0) // already processed</span>
+<span class="lineNum">     138 </span>            :                                 ;
+<span class="lineNum">     139 </span><span class="lineCov">        417 :                         else if (strcmp(argv[i], &quot;--daemonize&quot;) == 0)</span>
+<span class="lineNum">     140 </span>            :                                 ;
+<span class="lineNum">     141 </span><span class="lineCov">        410 :                         else if (strncmp(argv[i], &quot;--zone=&quot;, 7) == 0)</span>
+<span class="lineNum">     142 </span>            :                                 ;
+<span class="lineNum">     143 </span>            : 
+<span class="lineNum">     144 </span>            :                         // options
+<span class="lineNum">     145 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">     146 </span><span class="lineCov">        409 :                         else if (strcmp(argv[i], &quot;--fallback-only&quot;) == 0)</span>
+<span class="lineNum">     147 </span><span class="lineCov">          3 :                                 arg_fallback_only = 1;</span>
+<span class="lineNum">     148 </span>            : #endif
+<span class="lineNum">     149 </span><span class="lineCov">        406 :                         else if (strncmp(argv[i], &quot;--cache-ttl=&quot;, 12) == 0) {</span>
+<span class="lineNum">     150 </span><span class="lineNoCov">          0 :                                 arg_cache_ttl = atoi(argv[i] + 12);</span>
+<span class="lineNum">     151 </span><span class="lineNoCov">          0 :                                 if (arg_cache_ttl &lt; CACHE_TTL_MIN || arg_cache_ttl &gt; CACHE_TTL_MAX) {</span>
+<span class="lineNum">     152 </span><span class="lineNoCov">          0 :                                         fprintf(stderr, &quot;Error: please provide a cache TTL between %d and %d seconds\n&quot;,</span>
+<span class="lineNum">     153 </span>            :                                                 CACHE_TTL_MIN, CACHE_TTL_MAX);
+<span class="lineNum">     154 </span><span class="lineNoCov">          0 :                                         exit(1);</span>
+<span class="lineNum">     155 </span>            :                                 }
+<span class="lineNum">     156 </span>            :                         }
+<span class="lineNum">     157 </span><span class="lineCov">        406 :                         else if (strncmp(argv[i], &quot;--certfile=&quot;, 11) == 0)</span>
+<span class="lineNum">     158 </span><span class="lineNoCov">          0 :                                 arg_certfile = argv[i] + 11;</span>
+<span class="lineNum">     159 </span><span class="lineCov">        406 :                         else if (strcmp(argv[i], &quot;--allow-all-queries&quot;) == 0)</span>
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :                                 arg_allow_all_queries = 1;</span>
+<span class="lineNum">     161 </span><span class="lineCov">        406 :                         else if (strcmp(argv[i], &quot;--allow-local-doh&quot;) == 0) {</span>
+<span class="lineNum">     162 </span><span class="lineCov">          4 :                                 arg_allow_local_doh = 1;</span>
+<span class="lineNum">     163 </span><span class="lineCov">          4 :                                 filter_postinit();</span>
+<span class="lineNum">     164 </span>            :                         }
+<span class="lineNum">     165 </span><span class="lineCov">        402 :                         else if (strcmp(argv[i], &quot;--nofilter&quot;) == 0)</span>
+<span class="lineNum">     166 </span><span class="lineCov">          4 :                                 arg_nofilter = 1;</span>
+<span class="lineNum">     167 </span><span class="lineCov">        398 :                         else if (strcmp(argv[i], &quot;--ipv6&quot;) == 0)</span>
+<span class="lineNum">     168 </span><span class="lineCov">          4 :                                 arg_ipv6 = 1;</span>
+<span class="lineNum">     169 </span><span class="lineCov">        394 :                         else if (strncmp(argv[i], &quot;--resolvers=&quot;, 12) == 0) {</span>
+<span class="lineNum">     170 </span><span class="lineCov">          4 :                                 arg_resolvers = atoi(argv[i] + 12);</span>
+<span class="lineNum">     171 </span><span class="lineCov">          4 :                                 if (arg_resolvers &lt; RESOLVERS_CNT_MIN || arg_resolvers &gt; RESOLVERS_CNT_MAX) {</span>
+<span class="lineNum">     172 </span><span class="lineNoCov">          0 :                                         fprintf(stderr, &quot;Error: the number of resolver processes should be between %d and %d\n&quot;,</span>
+<span class="lineNum">     173 </span>            :                                                 RESOLVERS_CNT_MIN, RESOLVERS_CNT_MAX);
+<span class="lineNum">     174 </span><span class="lineNoCov">          0 :                                         return 1;</span>
+<span class="lineNum">     175 </span>            :                                 }
+<span class="lineNum">     176 </span>            :                         }
+<span class="lineNum">     177 </span><span class="lineCov">        390 :                         else if (strncmp(argv[i], &quot;--id=&quot;, 5) == 0)</span>
+<span class="lineNum">     178 </span><span class="lineCov">         94 :                                 arg_id = atoi(argv[i] + 5);</span>
+<span class="lineNum">     179 </span><span class="lineCov">        296 :                         else if (strncmp(argv[i], &quot;--fd=&quot;, 5) == 0)</span>
+<span class="lineNum">     180 </span><span class="lineCov">         94 :                                 arg_fd = atoi(argv[i] + 5);</span>
+<span class="lineNum">     181 </span><span class="lineCov">        202 :                         else if (strncmp(argv[i], &quot;--server=&quot;, 9) == 0) {</span>
+<span class="lineNum">     182 </span><span class="lineCov">         98 :                                 arg_server = strdup(argv[i] + 9);</span>
+<span class="lineNum">     183 </span><span class="lineCov">         98 :                                 if (!arg_server)</span>
+<span class="lineNum">     184 </span><span class="lineNoCov">          0 :                                         errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     185 </span>            :                         }
+<span class="lineNum">     186 </span><span class="lineCov">        104 :                         else if (strcmp(argv[i], &quot;--list&quot;) == 0) {</span>
+<span class="lineNum">     187 </span><span class="lineCov">          1 :                                 server_print_zone = 1;</span>
+<span class="lineNum">     188 </span><span class="lineCov">          1 :                                 server_print_servers = 1;</span>
+<span class="lineNum">     189 </span><span class="lineCov">          1 :                                 server_list(NULL);</span>
+<span class="lineNum">     190 </span><span class="lineCov">          1 :                                 return 0;</span>
+<span class="lineNum">     191 </span>            :                         }
+<span class="lineNum">     192 </span><span class="lineCov">        103 :                         else if (strncmp(argv[i], &quot;--list=&quot;, 7) == 0) {</span>
+<span class="lineNum">     193 </span><span class="lineCov">          9 :                                 server_print_zone = 1;</span>
+<span class="lineNum">     194 </span><span class="lineCov">          9 :                                 server_print_servers = 1;</span>
+<span class="lineNum">     195 </span><span class="lineCov">          9 :                                 server_list(argv[i] + 7);</span>
+<span class="lineNum">     196 </span><span class="lineCov">          9 :                                 return 0;</span>
+<span class="lineNum">     197 </span>            :                         }
+<span class="lineNum">     198 </span><span class="lineCov">         94 :                         else if (strcmp(argv[i], &quot;--proxies&quot;) == 0) {</span>
+<span class="lineNum">     199 </span><span class="lineCov">          3 :                                 procs_list();</span>
+<span class="lineNum">     200 </span><span class="lineCov">          3 :                                 return 0;</span>
+<span class="lineNum">     201 </span>            :                         }
+<span class="lineNum">     202 </span><span class="lineCov">         91 :                         else if (strncmp(argv[i], &quot;--proxy-addr=&quot;, 13) == 0) {</span>
+<span class="lineNum">     203 </span><span class="lineCov">         16 :                                 net_check_proxy_addr(argv[i] + 13); // will exit if error</span>
+<span class="lineNum">     204 </span><span class="lineCov">         16 :                                 arg_proxy_addr = argv[i] + 13;</span>
+<span class="lineNum">     205 </span>            :                         }
+<span class="lineNum">     206 </span><span class="lineCov">         75 :                         else if (strcmp(argv[i], &quot;--proxy-addr-any&quot;) == 0)</span>
+<span class="lineNum">     207 </span><span class="lineCov">          4 :                                 arg_proxy_addr_any = 1;</span>
+<span class="lineNum">     208 </span><span class="lineCov">         71 :                         else if (strcmp(argv[i], &quot;--monitor&quot;) == 0) {</span>
+<span class="lineNum">     209 </span><span class="lineCov">         10 :                                 shmem_monitor_stats(NULL);</span>
+<span class="lineNum">     210 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     211 </span>            :                         }
+<span class="lineNum">     212 </span><span class="lineCov">         61 :                         else if (strncmp(argv[i], &quot;--monitor=&quot;, 10) == 0) {</span>
+<span class="lineNum">     213 </span><span class="lineCov">          3 :                                 net_check_proxy_addr(argv[i] + 10); // will exit if error</span>
+<span class="lineNum">     214 </span><span class="lineCov">          3 :                                 shmem_monitor_stats(argv[i] + 10);</span>
+<span class="lineNum">     215 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     216 </span>            :                         }
+<span class="lineNum">     217 </span><span class="lineCov">         58 :                         else if (strncmp(argv[i], &quot;--forwarder=&quot;, 12) == 0) {</span>
+<span class="lineNum">     218 </span><span class="lineCov">          8 :                                 forwarder_set(argv[i] + 12);</span>
+<span class="lineNum">     219 </span>            :                         }
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span>            :                         // test options
+<span class="lineNum">     222 </span><span class="lineCov">         50 :                         else if (strcmp(argv[i], &quot;--test-hosts&quot;) == 0) {</span>
+<span class="lineNum">     223 </span><span class="lineNoCov">          0 :                                 arg_test_hosts = 1;</span>
+<span class="lineNum">     224 </span><span class="lineNoCov">          0 :                                 server_list(&quot;any&quot;);</span>
+<span class="lineNum">     225 </span><span class="lineNoCov">          0 :                                 filter_load_all_lists();</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     227 </span>            :                         }
+<span class="lineNum">     228 </span><span class="lineCov">         50 :                         else if (strncmp(argv[i], &quot;--test-url=&quot;, 11) == 0) {</span>
+<span class="lineNum">     229 </span><span class="lineCov">          3 :                                 server_list(&quot;any&quot;);</span>
+<span class="lineNum">     230 </span><span class="lineCov">          3 :                                 filter_load_all_lists();</span>
+<span class="lineNum">     231 </span><span class="lineCov">          3 :                                 filter_test(argv[i] + 11);</span>
+<span class="lineNum">     232 </span><span class="lineCov">          3 :                                 return 0;</span>
+<span class="lineNum">     233 </span>            :                         }
+<span class="lineNum">     234 </span><span class="lineCov">         47 :                         else if (strcmp(argv[i], &quot;--test-url-list&quot;) == 0) {</span>
+<span class="lineNum">     235 </span><span class="lineCov">          1 :                                 server_list(&quot;any&quot;);</span>
+<span class="lineNum">     236 </span><span class="lineCov">          1 :                                 filter_load_all_lists();</span>
+<span class="lineNum">     237 </span><span class="lineCov">          1 :                                 filter_test_list();</span>
+<span class="lineNum">     238 </span><span class="lineCov">          1 :                                 return 0;</span>
+<span class="lineNum">     239 </span>            :                         }
+<span class="lineNum">     240 </span><span class="lineCov">         46 :                         else if (strcmp(argv[i], &quot;--test-server&quot;) == 0) {</span>
+<span class="lineNum">     241 </span><span class="lineCov">          1 :                                 server_test_tag(NULL);</span>
+<span class="lineNum">     242 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     243 </span>            :                         }
+<span class="lineNum">     244 </span><span class="lineCov">         45 :                         else if (strncmp(argv[i], &quot;--test-server=&quot;, 14) == 0) {</span>
+<span class="lineNum">     245 </span><span class="lineCov">          1 :                                 server_test_tag(argv[i] + 14);</span>
+<span class="lineNum">     246 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     247 </span>            :                         }
+<span class="lineNum">     248 </span><span class="lineCov">         44 :                         else if (strncmp(argv[i], &quot;--whitelist=&quot;, 12) == 0)</span>
+<span class="lineNum">     249 </span><span class="lineCov">         42 :                                 whitelist_add(argv[i] + 12);</span>
+<span class="lineNum">     250 </span><span class="lineCov">          2 :                         else if (strncmp(argv[i], &quot;--whitelist-file=&quot;, 17) == 0)</span>
+<span class="lineNum">     251 </span><span class="lineCov">          2 :                                 whitelist_load_file(argv[i] + 17);</span>
+<span class="lineNum">     252 </span>            :                         else {
+<span class="lineNum">     253 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: invalid command line argument %s\n&quot;, argv[i]);</span>
+<span class="lineNum">     254 </span><span class="lineNoCov">          0 :                                 return 1;</span>
+<span class="lineNum">     255 </span>            :                         }
+<span class="lineNum">     256 </span>            :                 }
+<span class="lineNum">     257 </span>            :         }
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            : 
+<span class="lineNum">     260 </span><span class="lineCov">        126 :         if (getuid() != 0) {</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: you need to be root to run this program\n&quot;);</span>
+<span class="lineNum">     262 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">     263 </span>            :         }
+<span class="lineNum">     264 </span>            : 
+<span class="lineNum">     265 </span>            :         // check command line arguments
+<span class="lineNum">     266 </span><span class="lineCov">        126 :         if (arg_proxy_addr &amp;&amp; arg_proxy_addr_any) {</span>
+<span class="lineNum">     267 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: --proxy-addr and --proxy-addr-any are mutually exclusive\n&quot;);</span>
+<span class="lineNum">     268 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">     269 </span>            :         }
+<span class="lineNum">     270 </span>            : 
+<span class="lineNum">     271 </span>            :         // initialize the active server structure
+<span class="lineNum">     272 </span><span class="lineCov">        126 :         DnsServer *s = server_get();</span>
+<span class="lineNum">     273 </span><span class="lineCov">        225 :         assert(s);</span>
+<span class="lineNum">     274 </span><span class="lineCov">        225 :         assert(arg_server);</span>
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span>            :         // start the frontend or the resolver
+<span class="lineNum">     277 </span><span class="lineCov">        225 :         if (arg_id != -1) {</span>
+<span class="lineNum">     278 </span><span class="lineCov">         94 :                 assert(arg_fd != -1);</span>
+<span class="lineNum">     279 </span><span class="lineCov">         94 :                 resolver();</span>
+<span class="lineNum">     280 </span>            :         }
+<span class="lineNum">     281 </span>            :         else {
+<span class="lineNum">     282 </span><span class="lineCov">        131 :                 logprintf(&quot;fdns starting\n&quot;);</span>
+<span class="lineNum">     283 </span><span class="lineCov">        131 :                 if (!arg_fallback_only) {</span>
+<span class="lineNum">     284 </span><span class="lineCov">        129 :                         logprintf(&quot;connecting to %s server\n&quot;, s-&gt;name);</span>
+<span class="lineNum">     285 </span><span class="lineCov">        129 :                         logprintf(&quot;\t%s\n&quot;, s-&gt;tags);</span>
+<span class="lineNum">     286 </span>            :                 }
+<span class="lineNum">     287 </span><span class="lineCov">        131 :                 frontend();</span>
+<span class="lineNum">     288 </span>            :         }
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     291 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

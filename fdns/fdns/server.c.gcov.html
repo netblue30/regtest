@@ -1,0 +1,588 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/server.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - server.c<span style="font-size: 80%;"> (source / <a href="server.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">239</td>
+            <td class="headerCovTableEntry">323</td>
+            <td class="headerCovTableEntryLo">74.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      20 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      21 </span>            : #include &lt;sys/wait.h&gt;
+<span class="lineNum">      22 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      23 </span>            : 
+<span class="lineNum">      24 </span>            : int server_print_zone = 0;
+<span class="lineNum">      25 </span>            : int server_print_servers = 0;
+<span class="lineNum">      26 </span>            : 
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : static char *fdns_zone = NULL;
+<span class="lineNum">      29 </span>            : static DnsServer *slist = NULL;
+<span class="lineNum">      30 </span>            : static DnsServer *scurrent = NULL;
+<span class="lineNum">      31 </span>            : static char *push_request_tail =
+<span class="lineNum">      32 </span>            :         &quot;Accept: application/dns-message\r\n&quot; \
+<span class="lineNum">      33 </span>            :         &quot;Content-Type: application/dns-message\r\n&quot; \
+<span class="lineNum">      34 </span>            :         &quot;Content-Length: %d\r\n&quot; \
+<a name="35"><span class="lineNum">      35 </span>            :         &quot;\r\n&quot;;</a>
+<span class="lineNum">      36 </span>            : 
+<span class="lineNum">      37 </span><span class="lineCov">        878 : static inline void print_server(DnsServer *s) {</span>
+<span class="lineNum">      38 </span><span class="lineCov">        878 :         assert(s);</span>
+<span class="lineNum">      39 </span><span class="lineCov">        878 :         if (server_print_servers) {</span>
+<span class="lineNum">      40 </span><span class="lineCov">        158 :                 printf(&quot;%s - %s\n&quot;, s-&gt;name, s-&gt;tags);</span>
+<span class="lineNum">      41 </span><span class="lineCov">        158 :                 printf(&quot;\t%s\n&quot;, s-&gt;website);</span>
+<span class="lineNum">      42 </span>            :         }
+<a name="43"><span class="lineNum">      43 </span><span class="lineCov">        878 : }</span></a>
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span><span class="lineCov">        142 : static void set_zone(void) {</span>
+<span class="lineNum">      46 </span><span class="lineCov">        142 :         if (arg_zone) {</span>
+<span class="lineNum">      47 </span>            :                 // check valid zone
+<span class="lineNum">      48 </span><span class="lineCov">          2 :                 if (strcmp(arg_zone, &quot;Europe&quot;) != 0 &amp;&amp;</span>
+<span class="lineNum">      49 </span><span class="lineCov">          1 :                     strcmp(arg_zone, &quot;Asia-Pacific&quot;) != 0 &amp;&amp;</span>
+<span class="lineNum">      50 </span><span class="lineNoCov">          0 :                     strcmp(arg_zone, &quot;Americas-East&quot;) != 0 &amp;&amp;</span>
+<span class="lineNum">      51 </span><span class="lineNoCov">          0 :                     strcmp(arg_zone, &quot;Americas-West&quot;) != 0) {</span>
+<span class="lineNum">      52 </span><span class="lineNoCov">          0 :                         fprintf(stderr, &quot;Error: invalid zone\n&quot;);</span>
+<span class="lineNum">      53 </span><span class="lineNoCov">          0 :                         exit(1);</span>
+<span class="lineNum">      54 </span>            :                 }
+<span class="lineNum">      55 </span>            : 
+<span class="lineNum">      56 </span><span class="lineCov">          2 :                 fdns_zone = arg_zone;</span>
+<span class="lineNum">      57 </span><span class="lineCov">          2 :                 if (server_print_zone)</span>
+<span class="lineNum">      58 </span><span class="lineCov">          1 :                         printf(&quot;Current zone: %s\n&quot;, fdns_zone);</span>
+<span class="lineNum">      59 </span><span class="lineCov">          2 :                 return;</span>
+<span class="lineNum">      60 </span>            :         }
+<span class="lineNum">      61 </span>            : 
+<span class="lineNum">      62 </span>            :         // get timezone
+<span class="lineNum">      63 </span><span class="lineCov">        140 :         tzset();</span>
+<span class="lineNum">      64 </span><span class="lineCov">        140 :         int tz = -(timezone / 60) / 60;</span>
+<span class="lineNum">      65 </span><span class="lineCov">        140 :         fdns_zone = &quot;unknown&quot;;</span>
+<span class="lineNum">      66 </span>            : 
+<span class="lineNum">      67 </span><span class="lineCov">        140 :         if (tz &lt;= 14 &amp;&amp; tz &gt;= 4)</span>
+<span class="lineNum">      68 </span><span class="lineNoCov">          0 :                 fdns_zone = &quot;Asia-Pacific&quot;;</span>
+<span class="lineNum">      69 </span><span class="lineCov">        140 :         else if (tz &lt;= 3 &amp;&amp; tz &gt;= -1)</span>
+<span class="lineNum">      70 </span><span class="lineNoCov">          0 :                 fdns_zone = &quot;Europe&quot;;</span>
+<span class="lineNum">      71 </span><span class="lineCov">        140 :         else if (tz &lt;= -3 &amp;&amp; tz &gt;= -6)</span>
+<span class="lineNum">      72 </span><span class="lineCov">        140 :                 fdns_zone = &quot;Americas-East&quot;;</span>
+<span class="lineNum">      73 </span><span class="lineNoCov">          0 :         else if (tz &lt;= -7 &amp;&amp; tz &gt;= -11)</span>
+<span class="lineNum">      74 </span><span class="lineNoCov">          0 :                 fdns_zone = &quot;Americas-West&quot;;</span>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">        140 :         if (server_print_zone)</span>
+<span class="lineNum">      77 </span><span class="lineCov">          9 :                 printf(&quot;Current zone: %s\n&quot;, fdns_zone);</span>
+<span class="lineNum">      78 </span>            : }
+<a name="79"><span class="lineNum">      79 </span>            : </a>
+<span class="lineNum">      80 </span>            : // returns NULL for end of list
+<span class="lineNum">      81 </span><span class="lineCov">      10508 : static DnsServer *read_one_server(FILE *fp, int *linecnt, const char *fname) {</span>
+<span class="lineNum">      82 </span><span class="lineCov">      10508 :         assert(fp);</span>
+<span class="lineNum">      83 </span><span class="lineCov">      10508 :         assert(linecnt);</span>
+<span class="lineNum">      84 </span><span class="lineCov">      10508 :         assert(fname);</span>
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span><span class="lineCov">      10508 :         DnsServer *s = malloc(sizeof(DnsServer));</span>
+<span class="lineNum">      87 </span><span class="lineCov">      10508 :         if (!s)</span>
+<span class="lineNum">      88 </span><span class="lineNoCov">          0 :                 errExit(&quot;malloc&quot;);</span>
+<span class="lineNum">      89 </span><span class="lineCov">      10508 :         memset(s, 0, sizeof(DnsServer));</span>
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span>            :         char buf[4096];
+<span class="lineNum">      92 </span><span class="lineCov">      10508 :         buf[0] = '\0';</span>
+<span class="lineNum">      93 </span><span class="lineCov">      10508 :         int found = 0;</span>
+<span class="lineNum">      94 </span><span class="lineCov">      96134 :         while (fgets(buf, 4096, fp)) {</span>
+<span class="lineNum">      95 </span><span class="lineCov">      95992 :                 (*linecnt)++;</span>
+<span class="lineNum">      96 </span>            : 
+<span class="lineNum">      97 </span>            :                 // comments
+<span class="lineNum">      98 </span><span class="lineCov">      95992 :                 if (*buf == '#')</span>
+<span class="lineNum">      99 </span><span class="lineCov">      11076 :                         continue;</span>
+<span class="lineNum">     100 </span>            : 
+<span class="lineNum">     101 </span>            :                 // remove \n
+<span class="lineNum">     102 </span><span class="lineCov">      84916 :                 char *ptr = strchr(buf, '\n');</span>
+<span class="lineNum">     103 </span><span class="lineCov">      84916 :                 if (ptr)</span>
+<span class="lineNum">     104 </span><span class="lineCov">      84916 :                         *ptr = '\0';</span>
+<span class="lineNum">     105 </span>            : 
+<span class="lineNum">     106 </span><span class="lineCov">      84916 :                 if (strncmp(buf, &quot;name: &quot;, 6) == 0) {</span>
+<span class="lineNum">     107 </span><span class="lineCov">      10366 :                         if (s-&gt;name)</span>
+<span class="lineNum">     108 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     109 </span><span class="lineCov">      10366 :                         s-&gt;name = strdup(buf + 6);</span>
+<span class="lineNum">     110 </span><span class="lineCov">      10366 :                         if (!s-&gt;name)</span>
+<span class="lineNum">     111 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     112 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     113 </span>            :                 }
+<span class="lineNum">     114 </span><span class="lineCov">      74550 :                 else if (strncmp(buf, &quot;website: &quot;, 9) == 0) {</span>
+<span class="lineNum">     115 </span><span class="lineCov">      10366 :                         if (s-&gt;website)</span>
+<span class="lineNum">     116 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     117 </span><span class="lineCov">      10366 :                         s-&gt;website = strdup(buf + 9);</span>
+<span class="lineNum">     118 </span><span class="lineCov">      10366 :                         if (!s-&gt;website)</span>
+<span class="lineNum">     119 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     120 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     121 </span>            :                 }
+<span class="lineNum">     122 </span><span class="lineCov">      64184 :                 else if (strncmp(buf, &quot;zone: &quot;, 6) == 0) {</span>
+<span class="lineNum">     123 </span><span class="lineCov">      10366 :                         if (s-&gt;zone)</span>
+<span class="lineNum">     124 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     125 </span><span class="lineCov">      10366 :                         s-&gt;zone = strdup(buf + 6);</span>
+<span class="lineNum">     126 </span><span class="lineCov">      10366 :                         if (!s-&gt;zone)</span>
+<span class="lineNum">     127 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     128 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     129 </span>            :                 }
+<span class="lineNum">     130 </span><span class="lineCov">      53818 :                 else if (strncmp(buf, &quot;tags: &quot;, 6) == 0) {</span>
+<span class="lineNum">     131 </span><span class="lineCov">      10366 :                         if (s-&gt;tags)</span>
+<span class="lineNum">     132 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     133 </span><span class="lineCov">      10366 :                         s-&gt;tags = strdup(buf + 6);</span>
+<span class="lineNum">     134 </span><span class="lineCov">      10366 :                         if (!s-&gt;tags)</span>
+<span class="lineNum">     135 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     136 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     137 </span>            :                 }
+<span class="lineNum">     138 </span><span class="lineCov">      43452 :                 else if (strncmp(buf, &quot;address: &quot;, 9) == 0) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">      10366 :                         if (s-&gt;address)</span>
+<span class="lineNum">     140 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     141 </span><span class="lineCov">      10366 :                         s-&gt;address = strdup(buf + 9);</span>
+<span class="lineNum">     142 </span><span class="lineCov">      10366 :                         if (!s-&gt;address)</span>
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span>            : // todo: accept a server name in parallel with IP addresses
+<span class="lineNum">     146 </span>            :                         // check address:port
+<span class="lineNum">     147 </span><span class="lineCov">      10366 :                         if (check_addr_port(s-&gt;address)) {</span>
+<span class="lineNum">     148 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: file %s, line %d, invalid address:port\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     149 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     150 </span>            :                         }
+<span class="lineNum">     151 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     152 </span>            :                 }
+<span class="lineNum">     153 </span><span class="lineCov">      33086 :                 else if (strncmp(buf, &quot;host: &quot;, 6) == 0) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">      10366 :                         if (s-&gt;host)</span>
+<span class="lineNum">     155 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     156 </span><span class="lineCov">      10366 :                         s-&gt;host = strdup(buf + 6);</span>
+<span class="lineNum">     157 </span><span class="lineCov">      10366 :                         if (!s-&gt;host)</span>
+<span class="lineNum">     158 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     159 </span><span class="lineCov">      10366 :                         found = 1;</span>
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span>            :                         // build the DNS/HTTP request
+<span class="lineNum">     162 </span><span class="lineCov">      10366 :                         char *str = strchr(s-&gt;host, '/');</span>
+<span class="lineNum">     163 </span><span class="lineCov">      10366 :                         if (!str) {</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :                                 free(s);</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: file %s, line %d, invalid host\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     167 </span>            :                         }
+<span class="lineNum">     168 </span><span class="lineCov">      10366 :                         *str++ = '\0';</span>
+<span class="lineNum">     169 </span><span class="lineCov">      10366 :                         if (asprintf(&amp;s-&gt;request, &quot;POST /%s HTTP/1.1\r\nHost: %s\r\n%s&quot;, str, s-&gt;host, push_request_tail) == -1)</span>
+<span class="lineNum">     170 </span><span class="lineNoCov">          0 :                                 errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     171 </span>            :                 }
+<span class="lineNum">     172 </span><span class="lineCov">      22720 :                 else if (strncmp(buf, &quot;sni: &quot;, 5) == 0) {</span>
+<span class="lineNum">     173 </span><span class="lineCov">       1420 :                         if (s-&gt;sni)</span>
+<span class="lineNum">     174 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     175 </span><span class="lineCov">       1420 :                         if (strcmp(buf + 5, &quot;yes&quot;) == 0)</span>
+<span class="lineNum">     176 </span><span class="lineCov">       1420 :                                 s-&gt;sni = 1;</span>
+<span class="lineNum">     177 </span><span class="lineNoCov">          0 :                         else if (strcmp(buf + 5, &quot;no&quot;) == 0)</span>
+<span class="lineNum">     178 </span><span class="lineNoCov">          0 :                                 s-&gt;sni = 0;</span>
+<span class="lineNum">     179 </span>            :                         else {
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: file %s, line %d, wrong SNI setting\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     181 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     182 </span>            :                         }
+<span class="lineNum">     183 </span>            :                 }
+<span class="lineNum">     184 </span><span class="lineCov">      21300 :                 else if (strncmp(buf, &quot;keepalive: &quot;, 11) == 0) {</span>
+<span class="lineNum">     185 </span><span class="lineCov">      10366 :                         if (s-&gt;keepalive)</span>
+<span class="lineNum">     186 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
+<span class="lineNum">     187 </span><span class="lineCov">      10366 :                         if (sscanf(buf + 11, &quot;%d&quot;, &amp;s-&gt;keepalive) != 1 || s-&gt;keepalive &lt;= 0) {</span>
+<span class="lineNum">     188 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: file %s, line %d, invalid keepalive\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     189 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     190 </span>            :                         }
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            :                         // check server data
+<span class="lineNum">     193 </span><span class="lineCov">      10366 :                         if (!s-&gt;name || !s-&gt;website || !s-&gt;zone || !s-&gt;tags || !s-&gt;address || !s-&gt;host || !s-&gt;request) {</span>
+<span class="lineNum">     194 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: file %s, line %d, one of the server fields is missing\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     195 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     196 </span>            :                         }
+<span class="lineNum">     197 </span>            : 
+<span class="lineNum">     198 </span>            :                         // add host to filter
+<span class="lineNum">     199 </span><span class="lineCov">      10366 :                         if (!arg_allow_local_doh)</span>
+<span class="lineNum">     200 </span><span class="lineCov">      10074 :                                 filter_add('D', s-&gt;host);</span>
+<span class="lineNum">     201 </span>            : 
+<span class="lineNum">     202 </span><span class="lineCov">      10366 :                         return s;</span>
+<span class="lineNum">     203 </span>            :                 }
+<span class="lineNum">     204 </span>            :         }
+<span class="lineNum">     205 </span>            : 
+<span class="lineNum">     206 </span><span class="lineCov">        142 :         if (found) {</span>
+<span class="lineNum">     207 </span><span class="lineNoCov">          0 :                 free(s);</span>
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: file %s, line %d, keepalive missing\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     209 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">     210 </span>            :         }
+<span class="lineNum">     211 </span><span class="lineCov">        142 :         free(s);</span>
+<span class="lineNum">     212 </span><span class="lineCov">        142 :         return NULL;    // no  more servers in the configuration file</span>
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 : errout:</span>
+<span class="lineNum">     215 </span><span class="lineNoCov">          0 :         free(s);</span>
+<span class="lineNum">     216 </span><span class="lineNoCov">          0 :         fprintf(stderr, &quot;Error: file %s, line %d, field defined twice\n&quot;, fname, *linecnt);</span>
+<span class="lineNum">     217 </span><span class="lineNoCov">          0 :         exit(1);</span>
+<a name="218"><span class="lineNum">     218 </span>            : }</a>
+<span class="lineNum">     219 </span>            : 
+<span class="lineNum">     220 </span><span class="lineCov">        268 : static void load_list(void) {</span>
+<span class="lineNum">     221 </span><span class="lineCov">        268 :         if (slist)</span>
+<span class="lineNum">     222 </span><span class="lineCov">        126 :                 return;</span>
+<span class="lineNum">     223 </span><span class="lineCov">        142 :         if (fdns_zone == NULL)</span>
+<span class="lineNum">     224 </span><span class="lineCov">        142 :                 set_zone();</span>
+<span class="lineNum">     225 </span>            : 
+<span class="lineNum">     226 </span>            :         // load all server entries from /etc/fdns/servers in list
+<span class="lineNum">     227 </span><span class="lineCov">        142 :         FILE *fp = fopen(PATH_ETC_SERVER_LIST, &quot;r&quot;);</span>
+<span class="lineNum">     228 </span><span class="lineCov">        142 :         if (!fp) {</span>
+<span class="lineNum">     229 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: cannot find %s file. fdns is not correctly installed\n&quot;, PATH_ETC_SERVER_LIST);</span>
+<span class="lineNum">     230 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">     231 </span>            :         }
+<span class="lineNum">     232 </span>            : 
+<span class="lineNum">     233 </span><span class="lineCov">        142 :         int linecnt = 0; // line counter</span>
+<span class="lineNum">     234 </span><span class="lineCov">        142 :         DnsServer **ptr = &amp;slist;</span>
+<span class="lineNum">     235 </span><span class="lineCov">      10366 :         while (1) {</span>
+<span class="lineNum">     236 </span><span class="lineCov">      10508 :                 DnsServer *s = read_one_server(fp, &amp;linecnt, PATH_ETC_SERVER_LIST);</span>
+<span class="lineNum">     237 </span><span class="lineCov">      10508 :                 if (!s)</span>
+<span class="lineNum">     238 </span><span class="lineCov">        142 :                         break;</span>
+<span class="lineNum">     239 </span>            :                 // push it to the end of the list
+<span class="lineNum">     240 </span><span class="lineCov">      10366 :                 *ptr = s;</span>
+<span class="lineNum">     241 </span><span class="lineCov">      10366 :                 ptr = &amp;s-&gt;next;</span>
+<span class="lineNum">     242 </span>            :         }
+<span class="lineNum">     243 </span>            : 
+<span class="lineNum">     244 </span><span class="lineCov">        142 :         fclose(fp);</span>
+<a name="245"><span class="lineNum">     245 </span>            : }</a>
+<span class="lineNum">     246 </span>            : // return 0 if ok, 1 if failed
+<span class="lineNum">     247 </span><span class="lineCov">         51 : int test_server(const char *server_name)  {</span>
+<span class="lineNum">     248 </span><span class="lineCov">         51 :         if (arg_fallback_only)</span>
+<span class="lineNum">     249 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     250 </span>            : 
+<span class="lineNum">     251 </span>            :         // initialize server structure
+<span class="lineNum">     252 </span><span class="lineCov">         51 :         arg_server = strdup(server_name);</span>
+<span class="lineNum">     253 </span><span class="lineCov">         51 :         if (!arg_server)</span>
+<span class="lineNum">     254 </span><span class="lineNoCov">          0 :                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     255 </span><span class="lineCov">         51 :         assert(scurrent);</span>
+<span class="lineNum">     256 </span>            : 
+<span class="lineNum">     257 </span><span class="lineCov">         51 :         pid_t child = fork();</span>
+<span class="lineNum">     258 </span><span class="lineCov">        200 :         if (child == 0) { // child</span>
+<span class="lineNum">     259 </span><span class="lineCov">         51 :                 assert(scurrent);</span>
+<span class="lineNum">     260 </span>            : 
+<span class="lineNum">     261 </span>            :                 // disable logging
+<span class="lineNum">     262 </span><span class="lineCov">         51 :                 log_disable();</span>
+<span class="lineNum">     263 </span><span class="lineCov">         51 :                 ssl_init();</span>
+<span class="lineNum">     264 </span><span class="lineCov">         51 :                 printf(&quot;Testing server %s\n&quot;, arg_server);</span>
+<span class="lineNum">     265 </span><span class="lineCov">         51 :                 fflush(0);</span>
+<span class="lineNum">     266 </span>            : 
+<span class="lineNum">     267 </span><span class="lineCov">         51 :                 timetrace_start();</span>
+<span class="lineNum">     268 </span><span class="lineCov">         51 :                 ssl_open();</span>
+<span class="lineNum">     269 </span><span class="lineCov">         51 :                 if (ssl_state == SSL_CLOSED) {</span>
+<span class="lineNum">     270 </span><span class="lineNoCov">          0 :                         fprintf(stderr, &quot;\tError: cannot open SSL connection to server %s\n&quot;, arg_server);</span>
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
+<span class="lineNum">     272 </span><span class="lineNoCov">          0 :                         exit(1);</span>
+<span class="lineNum">     273 </span>            :                 }
+<span class="lineNum">     274 </span><span class="lineCov">         51 :                 float ms = timetrace_end();</span>
+<span class="lineNum">     275 </span><span class="lineCov">         51 :                 printf(&quot;\tSSL connection opened in %.02f ms\n&quot;, ms);</span>
+<span class="lineNum">     276 </span><span class="lineCov">         51 :                 fflush(0);</span>
+<span class="lineNum">     277 </span>            : 
+<span class="lineNum">     278 </span><span class="lineCov">         51 :                 timetrace_start();</span>
+<span class="lineNum">     279 </span><span class="lineCov">         51 :                 dns_keepalive();</span>
+<span class="lineNum">     280 </span><span class="lineCov">         51 :                 dns_keepalive();</span>
+<span class="lineNum">     281 </span><span class="lineCov">         51 :                 dns_keepalive();</span>
+<span class="lineNum">     282 </span><span class="lineCov">         51 :                 dns_keepalive();</span>
+<span class="lineNum">     283 </span><span class="lineCov">         51 :                 dns_keepalive();</span>
+<span class="lineNum">     284 </span><span class="lineCov">         51 :                 ms = timetrace_end();</span>
+<span class="lineNum">     285 </span>            : 
+<span class="lineNum">     286 </span><span class="lineCov">         51 :                 if (ssl_state == SSL_CLOSED) {</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :                         fprintf(stderr, &quot;\tError: SSL connection closed\n&quot;);</span>
+<span class="lineNum">     288 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
+<span class="lineNum">     289 </span><span class="lineNoCov">          0 :                         exit(1);</span>
+<span class="lineNum">     290 </span>            :                 }
+<span class="lineNum">     291 </span><span class="lineCov">         51 :                 printf(&quot;\tDoH response average %.02f ms\n&quot;, ms / 5);</span>
+<span class="lineNum">     292 </span><span class="lineCov">         51 :                 fflush(0);</span>
+<span class="lineNum">     293 </span>            : 
+<span class="lineNum">     294 </span><span class="lineCov">         51 :                 exit(0);</span>
+<span class="lineNum">     295 </span>            :         }
+<span class="lineNum">     296 </span><span class="lineCov">        149 :         int status = 0;</span>
+<span class="lineNum">     297 </span>            :         // wait for the child to finish
+<span class="lineNum">     298 </span><span class="lineCov">        149 :         int i = 0;</span>
+<span class="lineNum">     299 </span>            :         do {
+<span class="lineNum">     300 </span><span class="lineCov">        298 :                 int rv = waitpid(child, &amp;status, WNOHANG);</span>
+<span class="lineNum">     301 </span><span class="lineCov">        298 :                 if (rv  == child) {</span>
+<span class="lineNum">     302 </span>            :                         // check status
+<span class="lineNum">     303 </span><span class="lineCov">        149 :                         if (WIFEXITED(status) &amp;&amp; WEXITSTATUS(status) != 0) {</span>
+<span class="lineNum">     304 </span><span class="lineNoCov">          0 :                                 printf(&quot;\tError: server %s failed\n&quot;, arg_server);</span>
+<span class="lineNum">     305 </span><span class="lineNoCov">          0 :                                 fflush(0);</span>
+<span class="lineNum">     306 </span><span class="lineNoCov">          0 :                                 return 1;</span>
+<span class="lineNum">     307 </span>            :                         }
+<span class="lineNum">     308 </span><span class="lineCov">        149 :                         break;</span>
+<span class="lineNum">     309 </span>            :                 }
+<span class="lineNum">     310 </span><span class="lineCov">        149 :                 sleep(1);</span>
+<span class="lineNum">     311 </span><span class="lineCov">        149 :                 i++;</span>
+<span class="lineNum">     312 </span>            :         }
+<span class="lineNum">     313 </span><span class="lineCov">        149 :         while (i &lt; 10); // 10 second wait</span>
+<span class="lineNum">     314 </span>            : 
+<span class="lineNum">     315 </span><span class="lineCov">        149 :         if (i == 10) {</span>
+<span class="lineNum">     316 </span><span class="lineNoCov">          0 :                 printf(&quot;\tError: server %s failed\n&quot;, arg_server);</span>
+<span class="lineNum">     317 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
+<span class="lineNum">     318 </span><span class="lineNoCov">          0 :                 kill(child, SIGKILL);</span>
+<span class="lineNum">     319 </span><span class="lineNoCov">          0 :                 return 1;</span>
+<span class="lineNum">     320 </span>            :         }
+<span class="lineNum">     321 </span>            : 
+<span class="lineNum">     322 </span><span class="lineCov">        149 :         return 0;</span>
+<span class="lineNum">     323 </span>            : }
+<span class="lineNum">     324 </span>            : 
+<span class="lineNum">     325 </span>            : //**************************************************************************
+<span class="lineNum">     326 </span>            : // public interface
+<span class="lineNum">     327 </span>            : //**************************************************************************
+<a name="328"><span class="lineNum">     328 </span>            : static int second_try = 0;</a>
+<span class="lineNum">     329 </span>            : // mark all the servers corresponding to the given tag (s-&gt;active)
+<span class="lineNum">     330 </span><span class="lineCov">        142 : void server_list(const char *tag) {</span>
+<span class="lineNum">     331 </span><span class="lineCov">        142 :         load_list();</span>
+<span class="lineNum">     332 </span><span class="lineCov">        142 :         assert(slist);</span>
+<span class="lineNum">     333 </span><span class="lineCov">        142 :         assert(fdns_zone);</span>
+<span class="lineNum">     334 </span>            : 
+<span class="lineNum">     335 </span>            :         // if no tag provided use the current zone name
+<span class="lineNum">     336 </span><span class="lineCov">        142 :         if (!tag)</span>
+<span class="lineNum">     337 </span><span class="lineCov">          2 :                 tag = fdns_zone;</span>
+<span class="lineNum">     338 </span>            : 
+<span class="lineNum">     339 </span>            :         // if the tag is the name of a zone use zone &quot;any&quot;
+<span class="lineNum">     340 </span><span class="lineCov">        142 :         if (strcmp(tag, &quot;Europe&quot;) == 0 ||</span>
+<span class="lineNum">     341 </span><span class="lineCov">        142 :             strcmp(tag, &quot;Asia-Pacific&quot;) == 0 ||</span>
+<span class="lineNum">     342 </span><span class="lineCov">        142 :             strcmp(tag, &quot;Americas-East&quot;) == 0 ||</span>
+<span class="lineNum">     343 </span><span class="lineCov">        113 :             strcmp(tag, &quot;Americas-West&quot;) == 0 ||</span>
+<span class="lineNum">     344 </span><span class="lineCov">        113 :             strcmp(tag, &quot;Americas&quot;) == 0)</span>
+<span class="lineNum">     345 </span><span class="lineCov">         29 :                 fdns_zone = &quot;any&quot;;</span>
+<span class="lineNum">     346 </span>            : 
+<span class="lineNum">     347 </span>            :         // process tag &quot;all&quot;
+<span class="lineNum">     348 </span><span class="lineCov">        142 :         DnsServer *s = slist;</span>
+<span class="lineNum">     349 </span><span class="lineCov">        142 :         int cnt = 0;</span>
+<span class="lineNum">     350 </span><span class="lineCov">        142 :         if (strcmp(tag, &quot;all&quot;) == 0) {</span>
+<span class="lineNum">     351 </span><span class="lineCov">         74 :                 while (s) {</span>
+<span class="lineNum">     352 </span><span class="lineCov">         73 :                         print_server(s);</span>
+<span class="lineNum">     353 </span><span class="lineCov">         73 :                         s-&gt;active = ++cnt;</span>
+<span class="lineNum">     354 </span><span class="lineCov">         73 :                         s = s-&gt;next;</span>
+<span class="lineNum">     355 </span>            :                 }
+<span class="lineNum">     356 </span><span class="lineCov">          1 :                 if (server_print_servers)</span>
+<span class="lineNum">     357 </span><span class="lineCov">          1 :                         printf(&quot;%d servers found\n&quot;, cnt);</span>
+<span class="lineNum">     358 </span><span class="lineCov">          1 :                 return;</span>
+<span class="lineNum">     359 </span>            :         }
+<span class="lineNum">     360 </span>            : 
+<span class="lineNum">     361 </span>            :         // try to match a server name
+<span class="lineNum">     362 </span><span class="lineCov">        141 :         s = slist;</span>
+<span class="lineNum">     363 </span><span class="lineCov">       6510 :         while (s) {</span>
+<span class="lineNum">     364 </span><span class="lineCov">       6463 :                 if (strcmp(tag, s-&gt;name) == 0) {</span>
+<span class="lineNum">     365 </span><span class="lineCov">         94 :                         s-&gt;active = 1;</span>
+<span class="lineNum">     366 </span><span class="lineCov">         94 :                         print_server(s);</span>
+<span class="lineNum">     367 </span><span class="lineCov">         94 :                         return;</span>
+<span class="lineNum">     368 </span>            :                 }
+<span class="lineNum">     369 </span><span class="lineCov">       6369 :                 s = s-&gt;next;</span>
+<span class="lineNum">     370 </span>            :         }
+<span class="lineNum">     371 </span>            : 
+<span class="lineNum">     372 </span>            :         // match tags/zones
+<span class="lineNum">     373 </span><span class="lineCov">         47 :         s = slist;</span>
+<span class="lineNum">     374 </span><span class="lineCov">         47 :         cnt = 0;</span>
+<span class="lineNum">     375 </span><span class="lineCov">       3478 :         while (s) {</span>
+<span class="lineNum">     376 </span>            :                 // match the tag
+<span class="lineNum">     377 </span><span class="lineCov">       3431 :                 if (strstr(s-&gt;tags, tag) == NULL) {</span>
+<span class="lineNum">     378 </span><span class="lineCov">       2654 :                         s = s-&gt;next;</span>
+<span class="lineNum">     379 </span><span class="lineCov">       2654 :                         continue;</span>
+<span class="lineNum">     380 </span>            :                 }
+<span class="lineNum">     381 </span>            : 
+<span class="lineNum">     382 </span>            :                 // match the zone if the zone is not &quot;any&quot;
+<span class="lineNum">     383 </span><span class="lineCov">        777 :                 if (strcmp(fdns_zone, &quot;any&quot;) &amp;&amp; strstr(s-&gt;zone, fdns_zone) == NULL) {</span>
+<span class="lineNum">     384 </span><span class="lineCov">         66 :                         s = s-&gt;next;</span>
+<span class="lineNum">     385 </span><span class="lineCov">         66 :                         continue;</span>
+<span class="lineNum">     386 </span>            :                 }
+<span class="lineNum">     387 </span>            : 
+<span class="lineNum">     388 </span><span class="lineCov">        711 :                 print_server(s);</span>
+<span class="lineNum">     389 </span><span class="lineCov">        711 :                 s-&gt;active = ++cnt;</span>
+<span class="lineNum">     390 </span><span class="lineCov">        711 :                 s = s-&gt;next;</span>
+<span class="lineNum">     391 </span>            :         }
+<span class="lineNum">     392 </span>            : 
+<span class="lineNum">     393 </span><span class="lineCov">         47 :         if (cnt) {</span>
+<span class="lineNum">     394 </span><span class="lineCov">         43 :                 if (server_print_servers)</span>
+<span class="lineNum">     395 </span><span class="lineCov">          9 :                         printf(&quot;%d servers found\n&quot;, cnt);</span>
+<span class="lineNum">     396 </span>            :         }
+<span class="lineNum">     397 </span><span class="lineCov">          4 :         else if (second_try == 0) {</span>
+<span class="lineNum">     398 </span>            :                 // try to find server outside the current zone
+<span class="lineNum">     399 </span><span class="lineCov">          3 :                 second_try = 1;</span>
+<span class="lineNum">     400 </span><span class="lineCov">          3 :                 fdns_zone = &quot;any&quot;;</span>
+<span class="lineNum">     401 </span><span class="lineCov">          3 :                 server_list(tag);</span>
+<span class="lineNum">     402 </span><span class="lineCov">          3 :                 return;</span>
+<span class="lineNum">     403 </span>            :         }
+<span class="lineNum">     404 </span>            :         else
+<span class="lineNum">     405 </span><span class="lineCov">          1 :                 printf(&quot;Sorry, no such server available.\n&quot;);</span>
+<span class="lineNum">     406 </span>            : }
+<span class="lineNum">     407 </span>            : 
+<a name="408"><span class="lineNum">     408 </span>            : // get a pointer to the current server</a>
+<span class="lineNum">     409 </span>            : // if arg_server was not set, use the current zone as a tag
+<span class="lineNum">     410 </span><span class="lineCov">        959 : DnsServer *server_get(void) {</span>
+<span class="lineNum">     411 </span><span class="lineCov">        959 :         if (scurrent)</span>
+<span class="lineNum">     412 </span><span class="lineCov">        833 :                 return scurrent;</span>
+<span class="lineNum">     413 </span>            : 
+<span class="lineNum">     414 </span><span class="lineCov">        126 :         load_list();</span>
+<span class="lineNum">     415 </span><span class="lineCov">        126 :         if (!slist) {</span>
+<span class="lineNum">     416 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: the server list %s is empty&quot;, PATH_ETC_SERVER_LIST);</span>
+<span class="lineNum">     417 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">     418 </span>            :         }
+<span class="lineNum">     419 </span>            : 
+<span class="lineNum">     420 </span>            : 
+<span class="lineNum">     421 </span>            :         // update arg_server
+<span class="lineNum">     422 </span><span class="lineCov">        126 :         if (arg_server == NULL) {</span>
+<span class="lineNum">     423 </span><span class="lineCov">         28 :                 assert(fdns_zone);</span>
+<span class="lineNum">     424 </span><span class="lineCov">         28 :                 arg_server = strdup(fdns_zone);</span>
+<span class="lineNum">     425 </span><span class="lineCov">         28 :                 if (!arg_server)</span>
+<span class="lineNum">     426 </span><span class="lineNoCov">          0 :                         errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     427 </span>            :         } // arg_server is in mallocated memory
+<span class="lineNum">     428 </span><span class="lineCov">        126 :         if (arg_fallback_only) {</span>
+<span class="lineNum">     429 </span><span class="lineCov">          3 :                 scurrent = slist;</span>
+<span class="lineNum">     430 </span><span class="lineCov">          3 :                 return scurrent;</span>
+<span class="lineNum">     431 </span>            :         }
+<span class="lineNum">     432 </span>            : 
+<span class="lineNum">     433 </span>            :         // initialize s-&gt;active
+<span class="lineNum">     434 </span><span class="lineCov">        123 :         server_list(arg_server);</span>
+<span class="lineNum">     435 </span>            : 
+<span class="lineNum">     436 </span>            : 
+<span class="lineNum">     437 </span>            :         // count the servers
+<span class="lineNum">     438 </span><span class="lineCov">        123 :         int cnt = 0;</span>
+<span class="lineNum">     439 </span><span class="lineCov">        123 :         assert(slist);</span>
+<span class="lineNum">     440 </span><span class="lineCov">        123 :         DnsServer *s = slist;</span>
+<span class="lineNum">     441 </span><span class="lineCov">       9102 :         while (s) {</span>
+<span class="lineNum">     442 </span><span class="lineCov">       8979 :                 if (s-&gt;active)</span>
+<span class="lineNum">     443 </span><span class="lineCov">        654 :                         cnt++;</span>
+<span class="lineNum">     444 </span><span class="lineCov">       8979 :                 s = s-&gt;next;</span>
+<span class="lineNum">     445 </span>            :         }
+<span class="lineNum">     446 </span><span class="lineCov">        123 :         if (cnt == 0)</span>
+<span class="lineNum">     447 </span><span class="lineCov">          1 :                 goto errout;</span>
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span>            :         // choose a random server
+<span class="lineNum">     450 </span><span class="lineCov">        122 :         int index = rand() % cnt + 1;</span>
+<span class="lineNum">     451 </span><span class="lineCov">        122 :         if (arg_debug)</span>
+<span class="lineNum">     452 </span><span class="lineCov">          8 :                 printf(&quot;tag index %d\n&quot;, index);</span>
+<span class="lineNum">     453 </span><span class="lineCov">        122 :         s = slist;</span>
+<span class="lineNum">     454 </span><span class="lineCov">       3957 :         while (s) {</span>
+<span class="lineNum">     455 </span><span class="lineCov">       3957 :                 if (s-&gt;active == index) {</span>
+<span class="lineNum">     456 </span><span class="lineCov">        122 :                         scurrent = s;</span>
+<span class="lineNum">     457 </span><span class="lineCov">        122 :                         if (arg_id == -1 &amp;&amp; test_server(s-&gt;name)) {</span>
+<span class="lineNum">     458 </span>            :                                 // mark the server as inactive and try again
+<span class="lineNum">     459 </span><span class="lineNoCov">          0 :                                 s-&gt;active = 0;</span>
+<span class="lineNum">     460 </span>            :                                 // set new active count
+<span class="lineNum">     461 </span><span class="lineNoCov">          0 :                                 s = slist;</span>
+<span class="lineNum">     462 </span><span class="lineNoCov">          0 :                                 int cnt2 = 0;</span>
+<span class="lineNum">     463 </span><span class="lineNoCov">          0 :                                 while (s) {</span>
+<span class="lineNum">     464 </span><span class="lineNoCov">          0 :                                         if (s-&gt;active)</span>
+<span class="lineNum">     465 </span><span class="lineNoCov">          0 :                                                 s-&gt;active = ++cnt2;</span>
+<span class="lineNum">     466 </span><span class="lineNoCov">          0 :                                         s = s-&gt;next;</span>
+<span class="lineNum">     467 </span>            :                                 }
+<span class="lineNum">     468 </span><span class="lineNoCov">          0 :                                 s = slist;</span>
+<span class="lineNum">     469 </span><span class="lineNoCov">          0 :                                 assert(cnt2 == (cnt - 1));</span>
+<span class="lineNum">     470 </span><span class="lineNoCov">          0 :                                 cnt = cnt2;</span>
+<span class="lineNum">     471 </span><span class="lineNoCov">          0 :                                 if (cnt == 0)</span>
+<span class="lineNum">     472 </span><span class="lineNoCov">          0 :                                         goto errout;</span>
+<span class="lineNum">     473 </span>            : 
+<span class="lineNum">     474 </span>            :                                 // try again
+<span class="lineNum">     475 </span><span class="lineNoCov">          0 :                                 index = rand() % cnt + 1;</span>
+<span class="lineNum">     476 </span><span class="lineNoCov">          0 :                                 if (arg_debug)</span>
+<span class="lineNum">     477 </span><span class="lineNoCov">          0 :                                         printf(&quot;new tag index %d\n&quot;, index);</span>
+<span class="lineNum">     478 </span>            : 
+<span class="lineNum">     479 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     480 </span>            :                         }
+<span class="lineNum">     481 </span>            : 
+<span class="lineNum">     482 </span><span class="lineCov">        222 :                         free(arg_server);</span>
+<span class="lineNum">     483 </span><span class="lineCov">        222 :                         arg_server = strdup(s-&gt;name);</span>
+<span class="lineNum">     484 </span><span class="lineCov">        222 :                         if (!arg_server)</span>
+<span class="lineNum">     485 </span><span class="lineNoCov">          0 :                                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     486 </span><span class="lineCov">        222 :                         return scurrent;</span>
+<span class="lineNum">     487 </span>            :                 }
+<span class="lineNum">     488 </span><span class="lineCov">       3835 :                 s = s-&gt;next;</span>
+<span class="lineNum">     489 </span>            :         }
+<span class="lineNum">     490 </span>            : 
+<span class="lineNum">     491 </span><span class="lineNoCov">          0 : errout:</span>
+<span class="lineNum">     492 </span><span class="lineCov">          1 :         fprintf(stderr, &quot;Error: cannot connect to server %s\n&quot;, arg_server);</span>
+<span class="lineNum">     493 </span><span class="lineCov">          1 :         exit(1);</span>
+<span class="lineNum">     494 </span>            : }
+<span class="lineNum">     495 </span>            : 
+<span class="lineNum">     496 </span>            : 
+<a name="497"><span class="lineNum">     497 </span>            : </a>
+<span class="lineNum">     498 </span>            : 
+<span class="lineNum">     499 </span><span class="lineCov">          2 : void server_test_tag(const char *tag)  {</span>
+<span class="lineNum">     500 </span><span class="lineCov">          2 :         server_list(tag);</span>
+<span class="lineNum">     501 </span>            :         // walk the list
+<span class="lineNum">     502 </span><span class="lineCov">          2 :         DnsServer *s = slist;</span>
+<span class="lineNum">     503 </span><span class="lineCov">        116 :         while (s) {</span>
+<span class="lineNum">     504 </span><span class="lineCov">        116 :                 if (s-&gt;active) {</span>
+<span class="lineNum">     505 </span><span class="lineCov">         22 :                         scurrent = s;</span>
+<span class="lineNum">     506 </span><span class="lineCov">         22 :                         test_server(s-&gt;name);</span>
+<span class="lineNum">     507 </span>            :                 }
+<span class="lineNum">     508 </span><span class="lineCov">        114 :                 s = s-&gt;next;</span>
+<span class="lineNum">     509 </span>            :         }
+<span class="lineNum">     510 </span>            : 
+<span class="lineNum">     511 </span><span class="lineNoCov">          0 :         printf(&quot;\nTesting completed\n&quot;);</span>
+<span class="lineNum">     512 </span><span class="lineNoCov">          0 : }</span>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

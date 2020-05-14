@@ -1,0 +1,472 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/resolver.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - resolver.c<span style="font-size: 80%;"> (source / <a href="resolver.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">173</td>
+            <td class="headerCovTableEntry">217</td>
+            <td class="headerCovTableEntryMed">79.7 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      20 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      21 </span>            : #include &lt;sys/time.h&gt;
+<span class="lineNum">      22 </span>            : #include &lt;sys/prctl.h&gt;
+<span class="lineNum">      23 </span>            : #include &lt;errno.h&gt;
+<span class="lineNum">      24 </span>            : #include &lt;signal.h&gt;
+<span class="lineNum">      25 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      26 </span>            : 
+<a name="27"><span class="lineNum">      27 </span>            : static uint8_t buf[MAXBUF];</a>
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span><span class="lineCov">         94 : void resolver(void) {</span>
+<span class="lineNum">      30 </span>            :         // we get a SIGPIPE if we write to a socket closed by the other end;
+<span class="lineNum">      31 </span>            :         // ignoring it - standard practice for TCP servers
+<span class="lineNum">      32 </span><span class="lineCov">         94 :         signal(SIGPIPE, SIG_IGN);</span>
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            :         // load the drop list
+<span class="lineNum">      35 </span><span class="lineCov">         94 :         if (!arg_nofilter)</span>
+<span class="lineNum">      36 </span><span class="lineCov">         91 :                 filter_load_all_lists();</span>
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span>            :         // connect SSL/DNS server
+<span class="lineNum">      39 </span><span class="lineCov">         94 :         ssl_init();</span>
+<span class="lineNum">      40 </span><span class="lineCov">         94 :         ssl_open();</span>
+<span class="lineNum">      41 </span><span class="lineCov">         94 :         dns_keepalive();</span>
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            :         // start the local DNS server on 127.0.0.1 only
+<span class="lineNum">      44 </span>            :         // in order to mitigate DDoS amplification attacks
+<span class="lineNum">      45 </span><span class="lineCov">         94 :         int slocal = net_local_dns_socket(1);</span>
+<span class="lineNum">      46 </span><span class="lineCov">         94 :         if (slocal == -1) {</span>
+<span class="lineNum">      47 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: cannot bind to port 53\n&quot;);</span>
+<span class="lineNum">      48 </span><span class="lineNoCov">          0 :                 exit(1);</span>
+<span class="lineNum">      49 </span>            :         }
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span>            :         // security
+<span class="lineNum">      52 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">      53 </span><span class="lineCov">         94 :         __gcov_flush();</span>
+<span class="lineNum">      54 </span>            : #else
+<span class="lineNum">      55 </span>            :         int rv = seccomp_load_filter_list();
+<span class="lineNum">      56 </span>            :         chroot_drop_privs(&quot;nobody&quot;);
+<span class="lineNum">      57 </span>            :         if (rv)
+<span class="lineNum">      58 </span>            :                 seccomp_resolver();
+<span class="lineNum">      59 </span>            : #endif
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            :         // Remote dns server fallback server
+<span class="lineNum">      62 </span>            :         struct sockaddr_in addr_fallback;
+<span class="lineNum">      63 </span><span class="lineCov">         94 :         int sremote = net_remote_dns_socket(&amp;addr_fallback, FALLBACK_SERVER);</span>
+<span class="lineNum">      64 </span><span class="lineCov">         94 :         socklen_t addr_fallback_len = sizeof(addr_fallback);</span>
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span>            :         // initialize database - we use this database for the fallback server
+<span class="lineNum">      67 </span>            :         // in order to match DNS responses and DNS requests
+<span class="lineNum">      68 </span><span class="lineCov">         94 :         dnsdb_init();</span>
+<span class="lineNum">      69 </span>            : 
+<span class="lineNum">      70 </span><span class="lineCov">         94 :         fflush(0);</span>
+<span class="lineNum">      71 </span><span class="lineCov">         94 :         int resolver_keepalive_cnt = (RESOLVER_KEEPALIVE_TIMER * arg_id) / arg_resolvers;</span>
+<span class="lineNum">      72 </span><span class="lineCov">         94 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">      73 </span><span class="lineCov">         94 :         assert(srv);</span>
+<span class="lineNum">      74 </span><span class="lineCov">         94 :         int dns_keepalive_cnt = srv-&gt;keepalive;</span>
+<span class="lineNum">      75 </span><span class="lineCov">         94 :         int console_printout_cnt = CONSOLE_PRINTOUT_TIMER;</span>
+<span class="lineNum">      76 </span><span class="lineCov">         94 :         int ssl_reopen_cnt = SSL_REOPEN_TIMER;</span>
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span><span class="lineCov">         94 :         console_printout_cnt = (CONSOLE_PRINTOUT_TIMER * arg_id) / arg_resolvers;</span>
+<span class="lineNum">      79 </span><span class="lineCov">         94 :         int dns_over_udp = 0;</span>
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">         94 :         struct timeval t = { 1, 0};     // one second timeout</span>
+<span class="lineNum">      82 </span><span class="lineCov">         94 :         time_t timestamp = time(NULL);  // detect the computer going to sleep in order to reinitialize SSL connections</span>
+<span class="lineNum">      83 </span><span class="lineCov">         94 :         int frontend_keepalive_cnt = 0;</span>
+<span class="lineNum">      84 </span><span class="lineCov">         94 :         int query_second = 0;</span>
+<span class="lineNum">      85 </span><span class="lineCov">        751 :         while (1) {</span>
+<span class="lineNum">      86 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">      87 </span><span class="lineCov">        845 :         __gcov_flush();</span>
+<span class="lineNum">      88 </span>            : #endif
+<span class="lineNum">      89 </span>            :                 fd_set fds;
+<span class="lineNum">      90 </span><span class="lineCov">        751 :                 FD_ZERO(&amp;fds);</span>
+<span class="lineNum">      91 </span>            :                 // UDP sockets
+<span class="lineNum">      92 </span><span class="lineCov">        751 :                 FD_SET(slocal, &amp;fds);</span>
+<span class="lineNum">      93 </span><span class="lineCov">        751 :                 FD_SET(sremote, &amp;fds);</span>
+<span class="lineNum">      94 </span><span class="lineCov">        751 :                 int nfds = ((slocal &gt; sremote) ? slocal : sremote);</span>
+<span class="lineNum">      95 </span>            :                 // forwarding sockets
+<span class="lineNum">      96 </span><span class="lineCov">        751 :                 Forwarder *f = fwd;</span>
+<span class="lineNum">      97 </span><span class="lineCov">        820 :                 while (f) {</span>
+<span class="lineNum">      98 </span><span class="lineCov">         69 :                         FD_SET(f-&gt;sock, &amp;fds);</span>
+<span class="lineNum">      99 </span><span class="lineCov">         69 :                         nfds = (f-&gt;sock &gt; nfds) ? f-&gt;sock : nfds;</span>
+<span class="lineNum">     100 </span><span class="lineCov">         69 :                         f = f-&gt;next;</span>
+<span class="lineNum">     101 </span>            :                 }
+<span class="lineNum">     102 </span>            :                 // communication with the frontend process
+<span class="lineNum">     103 </span><span class="lineCov">        751 :                 FD_SET(arg_fd, &amp;fds);</span>
+<span class="lineNum">     104 </span><span class="lineCov">        751 :                 nfds = (arg_fd &gt; nfds) ? arg_fd : nfds;</span>
+<span class="lineNum">     105 </span><span class="lineCov">        751 :                 nfds += 1;</span>
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span><span class="lineCov">        751 :                 errno = 0;</span>
+<span class="lineNum">     108 </span><span class="lineCov">        751 :                 int rv = select(nfds, &amp;fds, NULL, NULL, &amp;t);</span>
+<span class="lineNum">     109 </span><span class="lineCov">        751 :                 if (rv == -1) {</span>
+<span class="lineNum">     110 </span><span class="lineNoCov">          0 :                         if (errno == EINTR) {</span>
+<span class="lineNum">     111 </span>            :                                 // select() man page reads:
+<span class="lineNum">     112 </span>            :                                 // &quot;... the sets and  timeout become undefined, so
+<span class="lineNum">     113 </span>            :                                 // do not rely on their contents after an error. &quot;
+<span class="lineNum">     114 </span><span class="lineNoCov">          0 :                                 t.tv_sec = 1;</span>
+<span class="lineNum">     115 </span><span class="lineNoCov">          0 :                                 t.tv_usec = 0;</span>
+<span class="lineNum">     116 </span><span class="lineCov">        751 :                                 continue;</span>
+<span class="lineNum">     117 </span>            :                         }
+<span class="lineNum">     118 </span><span class="lineNoCov">          0 :                         errExit(&quot;select&quot;);</span>
+<span class="lineNum">     119 </span>            :                 }
+<span class="lineNum">     120 </span>            : 
+<span class="lineNum">     121 </span>            :                 //***********************************************
+<span class="lineNum">     122 </span>            :                 // one second timeout
+<span class="lineNum">     123 </span>            :                 //***********************************************
+<span class="lineNum">     124 </span><span class="lineCov">        751 :                 else if (rv == 0) {</span>
+<span class="lineNum">     125 </span><span class="lineCov">        433 :                         time_t ts = time(NULL);</span>
+<span class="lineNum">     126 </span><span class="lineCov">        433 :                         if (ts - timestamp &gt; OUT_OF_SLEEP) {</span>
+<span class="lineNum">     127 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Suspend detected, restarting SSL connection\n&quot;);</span>
+<span class="lineNum">     128 </span><span class="lineNoCov">          0 :                                 cache_init();</span>
+<span class="lineNum">     129 </span><span class="lineNoCov">          0 :                                 if (!arg_fallback_only) {</span>
+<span class="lineNum">     130 </span><span class="lineNoCov">          0 :                                         ssl_close();</span>
+<span class="lineNum">     131 </span><span class="lineNoCov">          0 :                                         ssl_open();</span>
+<span class="lineNum">     132 </span>            :                                 }
+<span class="lineNum">     133 </span>            :                         }
+<span class="lineNum">     134 </span><span class="lineCov">        433 :                         timestamp = ts;</span>
+<span class="lineNum">     135 </span><span class="lineCov">        433 :                         query_second = 0;</span>
+<span class="lineNum">     136 </span>            : 
+<span class="lineNum">     137 </span>            :                         // processing stats
+<span class="lineNum">     138 </span><span class="lineCov">        433 :                         if (--console_printout_cnt &lt;= 0) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">        107 :                                 if (stats.changed) {</span>
+<span class="lineNum">     140 </span><span class="lineCov">         22 :                                         if (stats.ssl_pkts_cnt == 0)</span>
+<span class="lineNum">     141 </span><span class="lineCov">         10 :                                                 stats.ssl_pkts_cnt = 1;</span>
+<span class="lineNum">     142 </span><span class="lineCov">         22 :                                         rlogprintf(&quot;Stats: rx %u, dropped %u, fallback %u, cached %u, fwd %u, %.02lf\n&quot;,</span>
+<span class="lineNum">     143 </span>            :                                                    stats.rx, stats.drop, stats.fallback, stats.cached, stats.fwd,
+<span class="lineNum">     144 </span><span class="lineCov">         22 :                                                    stats.ssl_pkts_timetrace / stats.ssl_pkts_cnt);</span>
+<span class="lineNum">     145 </span><span class="lineCov">         22 :                                         stats.changed = 0;</span>
+<span class="lineNum">     146 </span><span class="lineCov">         22 :                                         memset(&amp;stats, 0, sizeof(stats));</span>
+<span class="lineNum">     147 </span>            :                                 }
+<span class="lineNum">     148 </span><span class="lineCov">        107 :                                 console_printout_cnt = CONSOLE_PRINTOUT_TIMER;</span>
+<span class="lineNum">     149 </span>            :                         }
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span>            :                         // reopen SSL connection
+<span class="lineNum">     152 </span><span class="lineCov">        433 :                         if (ssl_state == SSL_CLOSED) {</span>
+<span class="lineNum">     153 </span><span class="lineCov">          7 :                                 if (--ssl_reopen_cnt &lt;= 0) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">          1 :                                         ssl_open();</span>
+<span class="lineNum">     155 </span><span class="lineCov">          1 :                                         ssl_reopen_cnt = SSL_REOPEN_TIMER;</span>
+<span class="lineNum">     156 </span>            :                                 }
+<span class="lineNum">     157 </span>            :                         }
+<span class="lineNum">     158 </span>            : 
+<span class="lineNum">     159 </span>            :                         // ssl keepalive:
+<span class="lineNum">     160 </span>            :                         // if any incoming data, probably is the session going down - force a keepalive
+<span class="lineNum">     161 </span><span class="lineCov">        433 :                         if (ssl_status_check())</span>
+<span class="lineNum">     162 </span><span class="lineNoCov">          0 :                                 dns_keepalive_cnt = 0;</span>
+<span class="lineNum">     163 </span><span class="lineCov">        433 :                         if (--dns_keepalive_cnt &lt;= 0)  {</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :                                 dns_keepalive();</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :                                 dns_keepalive_cnt = srv-&gt;keepalive;</span>
+<span class="lineNum">     166 </span>            :                         }
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span>            :                         // send resolver keepalive
+<span class="lineNum">     169 </span><span class="lineCov">        433 :                         if (--resolver_keepalive_cnt &lt;= 0)  {</span>
+<span class="lineNum">     170 </span><span class="lineCov">         61 :                                 rlogprintf(&quot;resolver keepalive\n&quot;);</span>
+<span class="lineNum">     171 </span><span class="lineCov">         61 :                                 resolver_keepalive_cnt = RESOLVER_KEEPALIVE_TIMER;</span>
+<span class="lineNum">     172 </span>            :                         }
+<span class="lineNum">     173 </span>            : 
+<span class="lineNum">     174 </span>            :                         // check frontend keepalive
+<span class="lineNum">     175 </span><span class="lineCov">        433 :                         if (++frontend_keepalive_cnt &gt;= FRONTEND_KEEPALIVE_SHUTDOWN) {</span>
+<span class="lineNum">     176 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: resolver process going down, frontend keepalive failed\n&quot;);</span>
+<span class="lineNum">     177 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
+<span class="lineNum">     178 </span>            :                         }
+<span class="lineNum">     179 </span>            : 
+<span class="lineNum">     180 </span>            :                         // database cleanup
+<span class="lineNum">     181 </span><span class="lineCov">        433 :                         dnsdb_timeout();</span>
+<span class="lineNum">     182 </span><span class="lineCov">        433 :                         cache_timeout();</span>
+<span class="lineNum">     183 </span><span class="lineCov">        433 :                         t.tv_sec = 1;</span>
+<span class="lineNum">     184 </span><span class="lineCov">        433 :                         t.tv_usec = 0;</span>
+<span class="lineNum">     185 </span><span class="lineCov">        433 :                         continue;</span>
+<span class="lineNum">     186 </span>            :                 }
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span>            :                 //***********************************************
+<span class="lineNum">     189 </span>            :                 // frontend keepalive
+<span class="lineNum">     190 </span>            :                 //***********************************************
+<span class="lineNum">     191 </span><span class="lineCov">        318 :                 if (FD_ISSET(arg_fd, &amp;fds)) {</span>
+<span class="lineNum">     192 </span><span class="lineCov">        240 :                         int sz = read(arg_fd, buf, MAXBUF);</span>
+<span class="lineNum">     193 </span>            :                         (void) sz; // todo: error recovery
+<span class="lineNum">     194 </span><span class="lineCov">        240 :                         frontend_keepalive_cnt = 0;</span>
+<span class="lineNum">     195 </span><span class="lineCov">        240 :                         continue;</span>
+<span class="lineNum">     196 </span>            :                 }
+<span class="lineNum">     197 </span>            : 
+<span class="lineNum">     198 </span>            :                 //***********************************************
+<span class="lineNum">     199 </span>            :                 // data coming from remote DNS fallback server
+<span class="lineNum">     200 </span>            :                 //***********************************************
+<span class="lineNum">     201 </span><span class="lineCov">         78 :                 if (FD_ISSET(sremote, &amp;fds)) {</span>
+<span class="lineNum">     202 </span>            :                         struct sockaddr_in remote;
+<span class="lineNum">     203 </span><span class="lineCov">          2 :                         memset(&amp;remote, 0, sizeof(remote));</span>
+<span class="lineNum">     204 </span><span class="lineCov">          2 :                         socklen_t remote_len = sizeof(struct sockaddr_in);</span>
+<span class="lineNum">     205 </span><span class="lineCov">          2 :                         ssize_t len = recvfrom(sremote, buf, MAXBUF, 0, (struct sockaddr *) &amp;remote, &amp;remote_len);</span>
+<span class="lineNum">     206 </span><span class="lineCov">          2 :                         if (len == -1) // todo: parse errno - EINTR</span>
+<span class="lineNum">     207 </span><span class="lineNoCov">          0 :                                 errExit(&quot;recvfrom&quot;);</span>
+<span class="lineNum">     208 </span><span class="lineCov">          2 :                         if(arg_debug)</span>
+<span class="lineNum">     209 </span><span class="lineCov">          2 :                                 printf(&quot;rx remote packet len %ld\n&quot;, len);</span>
+<span class="lineNum">     210 </span>            : 
+<span class="lineNum">     211 </span>            :                         // check remote ip address - RFC 5452 (todo - more matches)
+<span class="lineNum">     212 </span><span class="lineCov">          2 :                         if (remote.sin_addr.s_addr != addr_fallback.sin_addr.s_addr) {</span>
+<span class="lineNum">     213 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: wrong IP address for fallback response: %d.%d.%d.%d\n&quot;,</span>
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 :                                            PRINT_IP(ntohs(remote.sin_addr.s_addr)));</span>
+<span class="lineNum">     215 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     216 </span>            :                         }
+<span class="lineNum">     217 </span><span class="lineCov">          2 :                         if (remote.sin_port != addr_fallback.sin_port) {</span>
+<span class="lineNum">     218 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: wrong UDP port for fallback response: %d\n&quot;,</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :                                            PRINT_IP(ntohs(remote.sin_port)));</span>
+<span class="lineNum">     220 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     221 </span>            :                         }
+<span class="lineNum">     222 </span>            : 
+<span class="lineNum">     223 </span><span class="lineCov">          2 :                         struct sockaddr_in *addr_client = dnsdb_retrieve(buf);</span>
+<span class="lineNum">     224 </span><span class="lineCov">          2 :                         if (!addr_client) {</span>
+<span class="lineNum">     225 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Warning: DNS over UDP request timeout\n&quot;);</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     227 </span>            :                         }
+<span class="lineNum">     228 </span><span class="lineCov">          2 :                         socklen_t addr_client_len = sizeof(struct sockaddr_in);</span>
+<span class="lineNum">     229 </span>            : 
+<span class="lineNum">     230 </span>            :                         // send the data to the local client
+<span class="lineNum">     231 </span><span class="lineCov">          2 :                         errno = 0;</span>
+<span class="lineNum">     232 </span><span class="lineCov">          2 :                         len = sendto(slocal, buf, len, 0, (struct sockaddr *) addr_client, addr_client_len);</span>
+<span class="lineNum">     233 </span><span class="lineCov">          2 :                         if(arg_debug)</span>
+<span class="lineNum">     234 </span><span class="lineCov">          2 :                                 printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     235 </span><span class="lineCov">          2 :                         if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     236 </span><span class="lineNoCov">          0 :                                 errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     237 </span><span class="lineCov">          2 :                         continue;</span>
+<span class="lineNum">     238 </span>            :                 }
+<span class="lineNum">     239 </span>            : 
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span>            :                 //***********************************************
+<span class="lineNum">     242 </span>            :                 // data coming from the local network
+<span class="lineNum">     243 </span>            :                 //***********************************************
+<span class="lineNum">     244 </span><span class="lineCov">         76 :                 if (FD_ISSET(slocal, &amp;fds)) {</span>
+<span class="lineNum">     245 </span>            :                         struct sockaddr_in addr_client;
+<span class="lineNum">     246 </span><span class="lineCov">         74 :                         socklen_t addr_client_len = sizeof(struct sockaddr_in);</span>
+<span class="lineNum">     247 </span>            : 
+<span class="lineNum">     248 </span><span class="lineCov">         74 :                         ssize_t len = recvfrom(slocal, buf, MAXBUF, 0, (struct sockaddr *) &amp;addr_client, &amp;addr_client_len);</span>
+<span class="lineNum">     249 </span><span class="lineCov">         74 :                         if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     250 </span><span class="lineNoCov">          0 :                                 errExit(&quot;recvfrom&quot;);</span>
+<span class="lineNum">     251 </span><span class="lineCov">         74 :                         if (++query_second &gt; 5)</span>
+<span class="lineNum">     252 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     253 </span>            : 
+<span class="lineNum">     254 </span><span class="lineCov">         74 :                         if(arg_debug)</span>
+<span class="lineNum">     255 </span><span class="lineCov">         12 :                                 printf(&quot;rx local packet len %ld\n&quot;, len);</span>
+<span class="lineNum">     256 </span><span class="lineCov">         74 :                         stats.rx++;</span>
+<span class="lineNum">     257 </span><span class="lineCov">         74 :                         stats.changed = 1;</span>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            :                         // filter incoming requests
+<span class="lineNum">     260 </span>            :                         DnsDestination dest;
+<span class="lineNum">     261 </span><span class="lineCov">         74 :                         uint8_t *r = dns_parser(buf, &amp;len, &amp;dest);</span>
+<span class="lineNum">     262 </span>            : 
+<span class="lineNum">     263 </span><span class="lineCov">         74 :                         assert(dest &lt; DEST_MAX);</span>
+<span class="lineNum">     264 </span><span class="lineCov">         74 :                         if (dest == DEST_DROP) {</span>
+<span class="lineNum">     265 </span><span class="lineNoCov">          0 :                                 stats.drop++;</span>
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :                                 continue;</span>
+<span class="lineNum">     267 </span>            :                         }
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">         74 :                         else if (dest == DEST_LOCAL) {</span>
+<span class="lineNum">     270 </span><span class="lineCov">         51 :                                 assert(r);</span>
+<span class="lineNum">     271 </span>            : 
+<span class="lineNum">     272 </span>            :                                 // send the loopback response
+<span class="lineNum">     273 </span><span class="lineCov">         51 :                                 len = sendto(slocal, r, len, 0, (struct sockaddr *) &amp;addr_client, addr_client_len);</span>
+<span class="lineNum">     274 </span><span class="lineCov">         51 :                                 if(arg_debug)</span>
+<span class="lineNum">     275 </span><span class="lineCov">          8 :                                         printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     276 </span><span class="lineCov">         51 :                                 if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     277 </span><span class="lineNoCov">          0 :                                         errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineCov">         51 :                                 continue;</span>
+<span class="lineNum">     280 </span>            :                         }
+<span class="lineNum">     281 </span>            : 
+<span class="lineNum">     282 </span><span class="lineCov">         23 :                         else if (dest == DEST_FORWARDING) {</span>
+<span class="lineNum">     283 </span><span class="lineCov">          2 :                                 assert(fwd_active);</span>
+<span class="lineNum">     284 </span><span class="lineCov">          2 :                                 errno = 0;</span>
+<span class="lineNum">     285 </span><span class="lineCov">          2 :                                 len = sendto(fwd_active-&gt;sock, buf, len, 0, (struct sockaddr *) &amp;fwd_active-&gt;saddr, fwd_active-&gt;slen);</span>
+<span class="lineNum">     286 </span><span class="lineCov">          2 :                                 if(arg_debug)</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :                                         printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     288 </span><span class="lineCov">          2 :                                 if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     289 </span><span class="lineNoCov">          0 :                                         errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     290 </span>            : 
+<span class="lineNum">     291 </span>            :                                 // store the incoming request in the database
+<span class="lineNum">     292 </span><span class="lineCov">          2 :                                 dnsdb_store(buf, &amp;addr_client);</span>
+<span class="lineNum">     293 </span><span class="lineCov">          2 :                                 fwd_active = NULL;</span>
+<span class="lineNum">     294 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">     295 </span><span class="lineCov">          2 :         __gcov_flush();</span>
+<span class="lineNum">     296 </span>            : #endif
+<span class="lineNum">     297 </span><span class="lineCov">          2 :                                 continue;</span>
+<span class="lineNum">     298 </span>            :                         }
+<span class="lineNum">     299 </span>            : 
+<span class="lineNum">     300 </span>            :                         // attempt to send the data over SSL; the request is not stored in the database
+<span class="lineNum">     301 </span><span class="lineCov">         21 :                         assert(dest == DEST_SSL);</span>
+<span class="lineNum">     302 </span>            :                         int ssl_len;
+<span class="lineNum">     303 </span><span class="lineCov">         21 :                         timetrace_start();</span>
+<span class="lineNum">     304 </span><span class="lineCov">         21 :                         if (ssl_state == SSL_OPEN)</span>
+<span class="lineNum">     305 </span><span class="lineCov">         19 :                                 ssl_len = ssl_rxtx_dns(buf, len);</span>
+<span class="lineNum">     306 </span>            : 
+<span class="lineNum">     307 </span>            :                         // a HTTP error from SSL, with no DNS data comming back
+<span class="lineNum">     308 </span><span class="lineCov">         21 :                         if (ssl_state == SSL_OPEN &amp;&amp; ssl_len == 0)</span>
+<span class="lineNum">     309 </span><span class="lineCov">          1 :                                 continue;       // drop the packet</span>
+<span class="lineNum">     310 </span>            :                         // good packet from SSL
+<span class="lineNum">     311 </span><span class="lineCov">         20 :                         else if (ssl_state == SSL_OPEN &amp;&amp; ssl_len &gt; 0) {</span>
+<span class="lineNum">     312 </span><span class="lineCov">         18 :                                 stats.ssl_pkts_timetrace += timetrace_end();</span>
+<span class="lineNum">     313 </span><span class="lineCov">         18 :                                 stats.ssl_pkts_cnt++;</span>
+<span class="lineNum">     314 </span><span class="lineCov">         18 :                                 dns_over_udp = 0;</span>
+<span class="lineNum">     315 </span>            : 
+<span class="lineNum">     316 </span>            :                                 // we got a response, send the data back to the client
+<span class="lineNum">     317 </span><span class="lineCov">         18 :                                 len = ssl_len;</span>
+<span class="lineNum">     318 </span><span class="lineCov">         18 :                                 errno = 0;</span>
+<span class="lineNum">     319 </span><span class="lineCov">         18 :                                 len = sendto(slocal, buf, len, 0, (struct sockaddr *) &amp;addr_client, addr_client_len);</span>
+<span class="lineNum">     320 </span><span class="lineCov">         18 :                                 if(arg_debug)</span>
+<span class="lineNum">     321 </span><span class="lineCov">          2 :                                         printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     322 </span><span class="lineCov">         18 :                                 if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     323 </span><span class="lineNoCov">          0 :                                         errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     324 </span>            :                                 else
+<span class="lineNum">     325 </span><span class="lineCov">         18 :                                         dns_keepalive_cnt = srv-&gt;keepalive;</span>
+<span class="lineNum">     326 </span>            :                         }
+<span class="lineNum">     327 </span>            :                         // send the data to the remote fallback server; store the request in the database
+<span class="lineNum">     328 </span>            :                         else {
+<span class="lineNum">     329 </span><span class="lineCov">          2 :                                 stats.fallback++;</span>
+<span class="lineNum">     330 </span><span class="lineCov">          2 :                                 stats.changed = 1;</span>
+<span class="lineNum">     331 </span><span class="lineCov">          2 :                                 if (!dns_over_udp)</span>
+<span class="lineNum">     332 </span><span class="lineCov">          1 :                                         rlogprintf(&quot;Warning: sending requests in clear\n&quot;);</span>
+<span class="lineNum">     333 </span><span class="lineCov">          2 :                                 dns_over_udp = 1;</span>
+<span class="lineNum">     334 </span><span class="lineCov">          2 :                                 errno = 0;</span>
+<span class="lineNum">     335 </span><span class="lineCov">          2 :                                 len = sendto(sremote, buf, len, 0, (struct sockaddr *) &amp;addr_fallback, addr_fallback_len);</span>
+<span class="lineNum">     336 </span><span class="lineCov">          2 :                                 if(arg_debug)</span>
+<span class="lineNum">     337 </span><span class="lineCov">          2 :                                         printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     338 </span><span class="lineCov">          2 :                                 if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     339 </span><span class="lineNoCov">          0 :                                         errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     340 </span>            : 
+<span class="lineNum">     341 </span>            :                                 // store the incoming request in the database
+<span class="lineNum">     342 </span><span class="lineCov">          2 :                                 dnsdb_store(buf, &amp;addr_client);</span>
+<span class="lineNum">     343 </span>            :                         }
+<span class="lineNum">     344 </span><span class="lineCov">         20 :                         continue;</span>
+<span class="lineNum">     345 </span>            :                 }
+<span class="lineNum">     346 </span>            : 
+<span class="lineNum">     347 </span>            :                 //***********************************************
+<span class="lineNum">     348 </span>            :                 // data coming from a forwarding DNS server
+<span class="lineNum">     349 </span>            :                 //***********************************************
+<span class="lineNum">     350 </span><span class="lineCov">          2 :                 if (fwd) {</span>
+<span class="lineNum">     351 </span><span class="lineCov">          2 :                         Forwarder *f = fwd;</span>
+<span class="lineNum">     352 </span><span class="lineCov">          4 :                         while (f) {</span>
+<span class="lineNum">     353 </span><span class="lineCov">          2 :                                 if (FD_ISSET(f-&gt;sock, &amp;fds)) {</span>
+<span class="lineNum">     354 </span>            :                                         struct sockaddr_in remote;
+<span class="lineNum">     355 </span><span class="lineCov">          2 :                                         memset(&amp;remote, 0, sizeof(remote));</span>
+<span class="lineNum">     356 </span><span class="lineCov">          2 :                                         socklen_t remote_len = sizeof(struct sockaddr_in);</span>
+<span class="lineNum">     357 </span><span class="lineCov">          2 :                                         ssize_t len = recvfrom(f-&gt;sock, buf, MAXBUF, 0, (struct sockaddr *) &amp;remote, &amp;remote_len);</span>
+<span class="lineNum">     358 </span><span class="lineCov">          2 :                                         if (len == -1) // todo: parse errno - EINTR</span>
+<span class="lineNum">     359 </span><span class="lineNoCov">          0 :                                                 errExit(&quot;recvfrom&quot;);</span>
+<span class="lineNum">     360 </span><span class="lineCov">          2 :                                         if(arg_debug)</span>
+<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                                                 printf(&quot;rx remote packet len %ld\n&quot;, len);</span>
+<span class="lineNum">     362 </span>            : 
+<span class="lineNum">     363 </span>            :                                         // check remote ip address
+<span class="lineNum">     364 </span><span class="lineCov">          2 :                                         if (remote.sin_addr.s_addr != f-&gt;saddr.sin_addr.s_addr) {</span>
+<span class="lineNum">     365 </span><span class="lineNoCov">          0 :                                                 rlogprintf(&quot;Warning: wrong IP address for fwd response: %d.%d.%d.%d\n&quot;,</span>
+<span class="lineNum">     366 </span><span class="lineNoCov">          0 :                                                            PRINT_IP(ntohl(remote.sin_addr.s_addr)));</span>
+<span class="lineNum">     367 </span><span class="lineNoCov">          0 :                                                 continue;</span>
+<span class="lineNum">     368 </span>            :                                         }
+<span class="lineNum">     369 </span>            : 
+<span class="lineNum">     370 </span><span class="lineCov">          2 :                                         struct sockaddr_in *addr_client = dnsdb_retrieve(buf);</span>
+<span class="lineNum">     371 </span><span class="lineCov">          2 :                                         if (!addr_client) {</span>
+<span class="lineNum">     372 </span><span class="lineNoCov">          0 :                                                 rlogprintf(&quot;Warning: fwd DNS over UDP request timeout\n&quot;);</span>
+<span class="lineNum">     373 </span><span class="lineNoCov">          0 :                                                 continue;</span>
+<span class="lineNum">     374 </span>            :                                         }
+<span class="lineNum">     375 </span><span class="lineCov">          2 :                                         socklen_t addr_client_len = sizeof(struct sockaddr_in);</span>
+<span class="lineNum">     376 </span>            : 
+<span class="lineNum">     377 </span>            :                                         // send the data to the local client
+<span class="lineNum">     378 </span><span class="lineCov">          2 :                                         errno = 0;</span>
+<span class="lineNum">     379 </span><span class="lineCov">          2 :                                         len = sendto(slocal, buf, len, 0, (struct sockaddr *) addr_client, addr_client_len);</span>
+<span class="lineNum">     380 </span><span class="lineCov">          2 :                                         if(arg_debug)</span>
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :                                                 printf(&quot;len %ld, errno %d\n&quot;, len, errno);</span>
+<span class="lineNum">     382 </span><span class="lineCov">          2 :                                         if (len == -1) // todo: parse errno - EAGAIN</span>
+<span class="lineNum">     383 </span><span class="lineNoCov">          0 :                                                 errExit(&quot;sendto&quot;);</span>
+<span class="lineNum">     384 </span>            :                                 }
+<span class="lineNum">     385 </span>            : 
+<span class="lineNum">     386 </span><span class="lineCov">          2 :                                 f = f-&gt;next;</span>
+<span class="lineNum">     387 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">     388 </span><span class="lineCov">          2 :         __gcov_flush();</span>
+<span class="lineNum">     389 </span>            : #endif
+<span class="lineNum">     390 </span>            :                         }
+<span class="lineNum">     391 </span><span class="lineCov">          2 :                         continue;</span>
+<span class="lineNum">     392 </span>            :                 }
+<span class="lineNum">     393 </span>            : 
+<span class="lineNum">     394 </span>            :         }
+<span class="lineNum">     395 </span>            : }
+<span class="lineNum">     396 </span>            : 
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
