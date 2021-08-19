@@ -31,18 +31,18 @@
             <td class="headerValue">gcov-file</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">109</td>
-            <td class="headerCovTableEntry">197</td>
-            <td class="headerCovTableEntryLo">55.3 %</td>
+            <td class="headerCovTableEntry">196</td>
+            <td class="headerCovTableEntry">286</td>
+            <td class="headerCovTableEntryLo">68.5 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">6</td>
-            <td class="headerCovTableEntry">7</td>
-            <td class="headerCovTableEntryMed">85.7 %</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
         </table>
@@ -61,7 +61,7 @@
 <pre class="sourceHeading">          Line data    Source code</pre>
 <pre class="source">
 <a name="1"><span class="lineNum">       1 </span>            : /*</a>
-<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
 <span class="lineNum">       3 </span>            :  *
 <span class="lineNum">       4 </span>            :  * This file is part of fdns project
 <span class="lineNum">       5 </span>            :  *
@@ -84,335 +84,477 @@
 <span class="lineNum">      22 </span>            : #include &lt;openssl/bio.h&gt;
 <span class="lineNum">      23 </span>            : #include &lt;openssl/ssl.h&gt;
 <span class="lineNum">      24 </span>            : #include &lt;openssl/err.h&gt;
-<span class="lineNum">      25 </span>            : 
-<span class="lineNum">      26 </span>            : SSLState ssl_state = SSL_CLOSED;
-<span class="lineNum">      27 </span>            : static BIO *bio = NULL;
-<span class="lineNum">      28 </span>            : static SSL_CTX *ctx = NULL;
-<span class="lineNum">      29 </span>            : static SSL *ssl = NULL;
-<a name="30"><span class="lineNum">      30 </span>            : </a>
-<span class="lineNum">      31 </span>            : 
-<span class="lineNum">      32 </span><span class="lineCov">        840 : static void ssl_alert_callback(const SSL *s, int where, int ret) {</span>
-<span class="lineNum">      33 </span>            :         const char *str;
-<span class="lineNum">      34 </span><span class="lineCov">        840 :         int w = where &amp; ~SSL_ST_MASK;</span>
-<span class="lineNum">      35 </span>            : 
-<span class="lineNum">      36 </span><span class="lineCov">        840 :         if (w &amp; SSL_ST_CONNECT)</span>
-<span class="lineNum">      37 </span><span class="lineCov">        840 :                 return;</span>
+<span class="lineNum">      25 </span>            : #include &lt;netdb.h&gt;
+<span class="lineNum">      26 </span>            : #include &lt;sys/wait.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;sys/socket.h&gt;
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : SSLState ssl_state = SSL_CLOSED;
+<span class="lineNum">      30 </span>            : static BIO *bio = NULL;
+<span class="lineNum">      31 </span>            : static SSL_CTX *ctx = NULL;
+<span class="lineNum">      32 </span>            : static SSL *ssl = NULL;
+<a name="33"><span class="lineNum">      33 </span>            : </a>
+<span class="lineNum">      34 </span>            : // return 1 if ok, 0 if error
+<span class="lineNum">      35 </span><span class="lineCov">         89 : int ssl_test_open(void)  {</span>
+<span class="lineNum">      36 </span><span class="lineCov">         89 :         if (arg_fallback_only)</span>
+<span class="lineNum">      37 </span><span class="lineCov">          2 :                 return 1;</span>
 <span class="lineNum">      38 </span>            : 
-<span class="lineNum">      39 </span>            :         /*      if (w &amp; SSL_ST_CONNECT)
-<span class="lineNum">      40 </span>            :                         str = &quot;SSL_connect&quot;;
-<span class="lineNum">      41 </span><span class="lineNoCov">          0 :                 else */if (w &amp; SSL_ST_ACCEPT)</span>
-<span class="lineNum">      42 </span><span class="lineNoCov">          0 :                 str = &quot;SSL_accept&quot;;</span>
-<span class="lineNum">      43 </span>            :         else
-<span class="lineNum">      44 </span><span class="lineNoCov">          0 :                 str = &quot;undefined&quot;;</span>
-<span class="lineNum">      45 </span>            : 
-<span class="lineNum">      46 </span><span class="lineNoCov">          0 :         if (where &amp; SSL_CB_LOOP) {</span>
-<span class="lineNum">      47 </span><span class="lineNoCov">          0 :                 printf(&quot;Alert: %s:%s\n&quot;, str, SSL_state_string_long(s));</span>
-<span class="lineNum">      48 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
-<span class="lineNum">      49 </span>            :         }
-<span class="lineNum">      50 </span><span class="lineNoCov">          0 :         else if (where &amp; SSL_CB_ALERT) {</span>
-<span class="lineNum">      51 </span><span class="lineNoCov">          0 :                 str = (where &amp; SSL_CB_READ) ? &quot;read&quot; : &quot;write&quot;;</span>
-<span class="lineNum">      52 </span><span class="lineNoCov">          0 :                 printf(&quot;Alert: SSL3 alert %s:%s:%s\n&quot;, str,</span>
-<span class="lineNum">      53 </span>            :                            SSL_alert_type_string_long(ret),
-<span class="lineNum">      54 </span>            :                            SSL_alert_desc_string_long(ret));
-<span class="lineNum">      55 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
-<span class="lineNum">      56 </span>            :         }
-<span class="lineNum">      57 </span><span class="lineNoCov">          0 :         else if (where &amp; SSL_CB_EXIT) {</span>
-<span class="lineNum">      58 </span><span class="lineNoCov">          0 :                 if (ret == 0) {</span>
-<span class="lineNum">      59 </span><span class="lineNoCov">          0 :                         printf(&quot;Alert: %s:failed in %s\n&quot;,</span>
-<span class="lineNum">      60 </span>            :                                    str, SSL_state_string_long(s));
-<span class="lineNum">      61 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
-<span class="lineNum">      62 </span>            :                 }
-<span class="lineNum">      63 </span><span class="lineNoCov">          0 :                 else if (ret &lt; 0) {</span>
-<span class="lineNum">      64 </span><span class="lineNoCov">          0 :                         printf(&quot;Alert: %s:error in %s\n&quot;,</span>
-<span class="lineNum">      65 </span>            :                                    str, SSL_state_string_long(s));
-<span class="lineNum">      66 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
-<span class="lineNum">      67 </span>            :                 }
-<span class="lineNum">      68 </span>            :         }
-<a name="69"><span class="lineNum">      69 </span>            : }</a>
+<span class="lineNum">      39 </span><span class="lineCov">         87 :         pid_t child = fork();</span>
+<span class="lineNum">      40 </span><span class="lineCov">         98 :         if (child == 0) { // child</span>
+<span class="lineNum">      41 </span><span class="lineCov">         13 :                 log_disable();</span>
+<span class="lineNum">      42 </span><span class="lineCov">         13 :                 ssl_open();</span>
+<span class="lineNum">      43 </span><span class="lineCov">         13 :                 if (ssl_state == SSL_CLOSED)</span>
+<span class="lineNum">      44 </span><span class="lineNoCov">          0 :                         exit(1);</span>
+<span class="lineNum">      45 </span><span class="lineCov">         13 :                 ssl_close();</span>
+<span class="lineNum">      46 </span><span class="lineCov">         13 :                 exit(0);</span>
+<span class="lineNum">      47 </span>            :         }
+<span class="lineNum">      48 </span>            : 
+<span class="lineNum">      49 </span>            :         // wait for the child to finish
+<span class="lineNum">      50 </span><span class="lineCov">         85 :         int i = 0;</span>
+<span class="lineNum">      51 </span>            :         do {
+<span class="lineNum">      52 </span><span class="lineCov">        172 :                 int status = 0;</span>
+<span class="lineNum">      53 </span><span class="lineCov">        172 :                 pid_t rv = waitpid(child, &amp;status, WNOHANG);</span>
+<span class="lineNum">      54 </span><span class="lineCov">        172 :                 if (rv == child) {</span>
+<span class="lineNum">      55 </span><span class="lineCov">         85 :                         if (WIFEXITED(status) &amp;&amp; WEXITSTATUS(status) == 1) {</span>
+<span class="lineNum">      56 </span><span class="lineNoCov">          0 :                                 printf(&quot; Error: SSL connect test failed\n&quot;);</span>
+<span class="lineNum">      57 </span><span class="lineNoCov">          0 :                                 fflush(0);</span>
+<span class="lineNum">      58 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">      59 </span>            :                         }
+<span class="lineNum">      60 </span><span class="lineCov">         85 :                         break;</span>
+<span class="lineNum">      61 </span>            :                 }
+<span class="lineNum">      62 </span>            : 
+<span class="lineNum">      63 </span><span class="lineCov">         87 :                 sleep(1);</span>
+<span class="lineNum">      64 </span><span class="lineCov">         87 :                 i++;</span>
+<span class="lineNum">      65 </span>            :         }
+<span class="lineNum">      66 </span><span class="lineCov">         87 :         while (i &lt; 5); // 5 seconds test</span>
+<span class="lineNum">      67 </span>            : 
+<span class="lineNum">      68 </span><span class="lineCov">         85 :         kill(child, SIGKILL);</span>
+<span class="lineNum">      69 </span><span class="lineCov">         85 :         usleep(10000);</span>
 <span class="lineNum">      70 </span>            : 
-<span class="lineNum">      71 </span><span class="lineCov">        433 : int ssl_status_check(void) {</span>
-<span class="lineNum">      72 </span><span class="lineCov">        433 :         if (ssl == NULL)</span>
-<span class="lineNum">      73 </span><span class="lineCov">          7 :                 return 0;</span>
-<span class="lineNum">      74 </span>            : 
-<span class="lineNum">      75 </span>            :         fd_set readfds;
-<span class="lineNum">      76 </span><span class="lineCov">        426 :         FD_ZERO(&amp;readfds);</span>
-<span class="lineNum">      77 </span><span class="lineCov">        426 :         int fd = SSL_get_fd(ssl);</span>
-<span class="lineNum">      78 </span><span class="lineCov">        426 :         FD_SET(fd, &amp;readfds);</span>
-<span class="lineNum">      79 </span>            :         struct timeval timeout;
-<span class="lineNum">      80 </span><span class="lineCov">        426 :         timeout.tv_sec = 0;</span>
-<span class="lineNum">      81 </span><span class="lineCov">        426 :         timeout.tv_usec = 1;</span>
+<span class="lineNum">      71 </span><span class="lineCov">         85 :         if (i &gt;= 5)</span>
+<span class="lineNum">      72 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">      73 </span><span class="lineCov">         85 :         return 1;</span>
+<a name="74"><span class="lineNum">      74 </span>            : }</a>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">       1041 : static void ssl_alert_callback(const SSL *s, int where, int ret) {</span>
+<span class="lineNum">      77 </span>            :         const char *str;
+<span class="lineNum">      78 </span><span class="lineCov">       1041 :         int w = where &amp; ~SSL_ST_MASK;</span>
+<span class="lineNum">      79 </span>            : 
+<span class="lineNum">      80 </span><span class="lineCov">       1041 :         if (w &amp; SSL_ST_CONNECT)</span>
+<span class="lineNum">      81 </span><span class="lineCov">       1028 :                 return;</span>
 <span class="lineNum">      82 </span>            : 
-<span class="lineNum">      83 </span><span class="lineCov">        426 :         int rv = select(fd + 1, &amp;readfds, NULL, NULL, &amp;timeout);</span>
-<span class="lineNum">      84 </span><span class="lineCov">        426 :         if (rv &lt;= 0)</span>
-<span class="lineNum">      85 </span><span class="lineCov">        426 :                 return 0;</span>
-<span class="lineNum">      86 </span>            : 
-<span class="lineNum">      87 </span><span class="lineNoCov">          0 :         if (FD_ISSET(fd, &amp;readfds)) {</span>
-<span class="lineNum">      88 </span><span class="lineNoCov">          0 :                 printf(&quot;incoming data\n&quot;);</span>
-<span class="lineNum">      89 </span><span class="lineNoCov">          0 :                 return 1;</span>
-<span class="lineNum">      90 </span>            :         }
-<span class="lineNum">      91 </span>            : 
-<span class="lineNum">      92 </span><span class="lineNoCov">          0 :         return 0;</span>
-<a name="93"><span class="lineNum">      93 </span>            : }</a>
-<span class="lineNum">      94 </span>            : 
-<span class="lineNum">      95 </span><span class="lineCov">        145 : void ssl_init(void) {</span>
-<span class="lineNum">      96 </span><span class="lineCov">        145 :         SSL_load_error_strings();</span>
-<span class="lineNum">      97 </span><span class="lineCov">        145 :         SSL_library_init();</span>
-<span class="lineNum">      98 </span><span class="lineCov">        145 :         ERR_load_BIO_strings();</span>
-<span class="lineNum">      99 </span><span class="lineCov">        145 :         OpenSSL_add_all_algorithms();</span>
-<span class="lineNum">     100 </span><span class="lineCov">        145 : }</span>
-<span class="lineNum">     101 </span>            : 
-<span class="lineNum">     102 </span>            : static char *certlist[] = {
-<span class="lineNum">     103 </span>            :         &quot;/etc/ssl/certs/ca-certificates.crt&quot;, // Debian/Ubuntu
-<span class="lineNum">     104 </span>            :         &quot;/etc/ssl/certs/ca-bundle.crt&quot;, // Fedora/CentOS
-<span class="lineNum">     105 </span>            :         NULL
-<a name="106"><span class="lineNum">     106 </span>            : };</a>
-<span class="lineNum">     107 </span>            : 
-<span class="lineNum">     108 </span><span class="lineCov">        144 : char *get_cert_file(void) {</span>
-<span class="lineNum">     109 </span><span class="lineCov">        144 :         if (arg_certfile)</span>
-<span class="lineNum">     110 </span><span class="lineNoCov">          0 :                 return arg_certfile;</span>
-<span class="lineNum">     111 </span>            : 
-<span class="lineNum">     112 </span><span class="lineCov">        144 :         int i = 0;</span>
-<span class="lineNum">     113 </span><span class="lineCov">        144 :         while (certlist[i]) {</span>
-<span class="lineNum">     114 </span>            :                 struct stat s;
-<span class="lineNum">     115 </span><span class="lineCov">        144 :                 if (stat(certlist[i], &amp;s) == 0)</span>
-<span class="lineNum">     116 </span><span class="lineCov">        144 :                         return certlist[i];</span>
-<span class="lineNum">     117 </span><span class="lineNoCov">          0 :                 i++;</span>
-<span class="lineNum">     118 </span>            :         }
-<span class="lineNum">     119 </span>            : 
-<span class="lineNum">     120 </span><span class="lineNoCov">          0 :         return NULL;</span>
-<a name="121"><span class="lineNum">     121 </span>            : }</a>
-<span class="lineNum">     122 </span>            : 
-<span class="lineNum">     123 </span><span class="lineCov">        146 : void ssl_open(void) {</span>
-<span class="lineNum">     124 </span><span class="lineCov">        146 :         assert(ssl_state == SSL_CLOSED);</span>
-<span class="lineNum">     125 </span><span class="lineCov">        146 :         DnsServer *srv = server_get();</span>
-<span class="lineNum">     126 </span><span class="lineCov">        146 :         assert(srv);</span>
-<span class="lineNum">     127 </span>            : 
-<span class="lineNum">     128 </span><span class="lineCov">        146 :         if (arg_fallback_only)</span>
-<span class="lineNum">     129 </span><span class="lineCov">          2 :                 return;</span>
+<span class="lineNum">      83 </span>            :         /*      if (w &amp; SSL_ST_CONNECT)
+<span class="lineNum">      84 </span>            :                         str = &quot;SSL_connect&quot;;
+<span class="lineNum">      85 </span><span class="lineCov">         13 :                 else */if (w &amp; SSL_ST_ACCEPT)</span>
+<span class="lineNum">      86 </span><span class="lineNoCov">          0 :                 str = &quot;SSL_accept&quot;;</span>
+<span class="lineNum">      87 </span>            :         else
+<span class="lineNum">      88 </span><span class="lineCov">         13 :                 str = &quot;undefined&quot;;</span>
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span><span class="lineCov">         13 :         if (where &amp; SSL_CB_LOOP) {</span>
+<span class="lineNum">      91 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d) Alert: %s:%s\n&quot;, arg_id, str, SSL_state_string_long(s));</span>
+<span class="lineNum">      92 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
+<span class="lineNum">      93 </span>            :         }
+<span class="lineNum">      94 </span><span class="lineCov">         13 :         else if (where &amp; SSL_CB_ALERT) {</span>
+<span class="lineNum">      95 </span><span class="lineCov">         13 :                 str = (where &amp; SSL_CB_READ) ? &quot;read&quot; : &quot;write&quot;;</span>
+<span class="lineNum">      96 </span><span class="lineCov">         13 :                 printf(&quot;(%d) Alert: SSL3 alert %s:%s:%s\n&quot;, arg_id, str,</span>
+<span class="lineNum">      97 </span>            :                            SSL_alert_type_string_long(ret),
+<span class="lineNum">      98 </span>            :                            SSL_alert_desc_string_long(ret));
+<span class="lineNum">      99 </span><span class="lineCov">         13 :                 fflush(0);</span>
+<span class="lineNum">     100 </span>            :         }
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :         else if (where &amp; SSL_CB_EXIT) {</span>
+<span class="lineNum">     102 </span><span class="lineNoCov">          0 :                 if (ret == 0) {</span>
+<span class="lineNum">     103 </span><span class="lineNoCov">          0 :                         printf(&quot;(%d) Alert: %s:failed in %s\n&quot;,</span>
+<span class="lineNum">     104 </span>            :                                    arg_id, str, SSL_state_string_long(s));
+<span class="lineNum">     105 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
+<span class="lineNum">     106 </span>            :                 }
+<span class="lineNum">     107 </span><span class="lineNoCov">          0 :                 else if (ret &lt; 0) {</span>
+<span class="lineNum">     108 </span><span class="lineNoCov">          0 :                         printf(&quot;(%d) Alert: %s:error in %s\n&quot;,</span>
+<span class="lineNum">     109 </span>            :                                    arg_id, str, SSL_state_string_long(s));
+<span class="lineNum">     110 </span><span class="lineNoCov">          0 :                         fflush(0);</span>
+<span class="lineNum">     111 </span>            :                 }
+<span class="lineNum">     112 </span>            :         }
+<a name="113"><span class="lineNum">     113 </span>            : }</a>
+<span class="lineNum">     114 </span>            : 
+<span class="lineNum">     115 </span><span class="lineCov">        497 : int ssl_status_check(void) {</span>
+<span class="lineNum">     116 </span><span class="lineCov">        497 :         if (ssl == NULL)</span>
+<span class="lineNum">     117 </span><span class="lineCov">          4 :                 return 0;</span>
+<span class="lineNum">     118 </span>            : 
+<span class="lineNum">     119 </span>            :         fd_set readfds;
+<span class="lineNum">     120 </span><span class="lineCov">        493 :         FD_ZERO(&amp;readfds);</span>
+<span class="lineNum">     121 </span><span class="lineCov">        493 :         int fd = SSL_get_fd(ssl);</span>
+<span class="lineNum">     122 </span><span class="lineCov">        493 :         FD_SET(fd, &amp;readfds);</span>
+<span class="lineNum">     123 </span>            :         struct timeval timeout;
+<span class="lineNum">     124 </span><span class="lineCov">        493 :         timeout.tv_sec = 0;</span>
+<span class="lineNum">     125 </span><span class="lineCov">        493 :         timeout.tv_usec = 1;</span>
+<span class="lineNum">     126 </span>            : 
+<span class="lineNum">     127 </span><span class="lineCov">        493 :         int rv = select(fd + 1, &amp;readfds, NULL, NULL, &amp;timeout);</span>
+<span class="lineNum">     128 </span><span class="lineCov">        493 :         if (rv &lt;= 0)</span>
+<span class="lineNum">     129 </span><span class="lineCov">        489 :                 return 0;</span>
 <span class="lineNum">     130 </span>            : 
-<span class="lineNum">     131 </span><span class="lineCov">        144 :         if (ctx == NULL) {</span>
-<span class="lineNum">     132 </span><span class="lineCov">        144 :                 ctx = SSL_CTX_new(TLS_client_method());</span>
-<span class="lineNum">     133 </span><span class="lineCov">        144 :                 char *certfile = get_cert_file();</span>
-<span class="lineNum">     134 </span><span class="lineCov">        144 :                 if (certfile == NULL) {</span>
-<span class="lineNum">     135 </span><span class="lineNoCov">          0 :                         if(! SSL_CTX_load_verify_locations(ctx, NULL, &quot;/etc/ssl/certs&quot;)) {</span>
-<span class="lineNum">     136 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: cannot find SSL certificates in /etc/ssl/certs\n&quot;);</span>
-<span class="lineNum">     137 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
-<span class="lineNum">     138 </span>            :                         }
-<span class="lineNum">     139 </span>            :                 }
-<span class="lineNum">     140 </span>            :                 else {
-<span class="lineNum">     141 </span><span class="lineCov">        144 :                         if(! SSL_CTX_load_verify_locations(ctx, certfile, NULL)) {</span>
-<span class="lineNum">     142 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: cannot find SSL certificate %s\n&quot;, certfile);</span>
-<span class="lineNum">     143 </span><span class="lineNoCov">          0 :                                 exit(1);</span>
-<span class="lineNum">     144 </span>            :                         }
-<span class="lineNum">     145 </span>            :                 }
-<span class="lineNum">     146 </span>            :         }
-<span class="lineNum">     147 </span>            : 
-<span class="lineNum">     148 </span><span class="lineCov">        144 :         bio = BIO_new_ssl_connect(ctx);</span>
-<span class="lineNum">     149 </span><span class="lineCov">        144 :         BIO_get_ssl(bio, &amp;ssl);</span>
-<span class="lineNum">     150 </span><span class="lineCov">        144 :         SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);</span>
+<span class="lineNum">     131 </span><span class="lineCov">          4 :         if (FD_ISSET(fd, &amp;readfds)) {</span>
+<span class="lineNum">     132 </span><span class="lineCov">          4 :                 printf(&quot;incoming data\n&quot;);</span>
+<span class="lineNum">     133 </span><span class="lineCov">          4 :                 return 1;</span>
+<span class="lineNum">     134 </span>            :         }
+<span class="lineNum">     135 </span>            : 
+<span class="lineNum">     136 </span><span class="lineNoCov">          0 :         return 0;</span>
+<a name="137"><span class="lineNum">     137 </span>            : }</a>
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span><span class="lineCov">        140 : void ssl_init(void) {</span>
+<span class="lineNum">     140 </span><span class="lineCov">        140 :         SSL_load_error_strings();</span>
+<span class="lineNum">     141 </span><span class="lineCov">        140 :         SSL_library_init();</span>
+<span class="lineNum">     142 </span><span class="lineCov">        140 :         ERR_load_BIO_strings();</span>
+<span class="lineNum">     143 </span><span class="lineCov">        140 :         OpenSSL_add_all_algorithms();</span>
+<span class="lineNum">     144 </span><span class="lineCov">        140 : }</span>
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span>            : static char *certlist[] = {
+<span class="lineNum">     147 </span>            :         &quot;/etc/ssl/certs/ca-certificates.crt&quot;, // Debian/Ubuntu
+<span class="lineNum">     148 </span>            :         &quot;/etc/ssl/certs/ca-bundle.crt&quot;, // Fedora/CentOS
+<span class="lineNum">     149 </span>            :         NULL
+<a name="150"><span class="lineNum">     150 </span>            : };</a>
 <span class="lineNum">     151 </span>            : 
-<span class="lineNum">     152 </span>            :         // set connection and SNI
-<span class="lineNum">     153 </span><span class="lineCov">        144 :         BIO_set_conn_hostname(bio, srv-&gt;address);</span>
-<span class="lineNum">     154 </span><span class="lineCov">        144 :         if (srv-&gt;sni)</span>
-<span class="lineNum">     155 </span><span class="lineCov">          4 :                 SSL_set_tlsext_host_name(ssl, srv-&gt;host);</span>
-<span class="lineNum">     156 </span>            : 
-<span class="lineNum">     157 </span><span class="lineCov">        144 :         if(BIO_do_connect(bio) &lt;= 0) {</span>
-<span class="lineNum">     158 </span>            : //              rlogprintf(&quot;Error: cannot connect SSL.\n&quot;);
-<span class="lineNum">     159 </span><span class="lineNoCov">          0 :                 return;</span>
-<span class="lineNum">     160 </span>            :         }
-<span class="lineNum">     161 </span>            : 
-<span class="lineNum">     162 </span>            :         int val;
-<span class="lineNum">     163 </span><span class="lineCov">        144 :         if ((val = SSL_get_verify_result(ssl)) != X509_V_OK) {</span>
-<span class="lineNum">     164 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Error: cannot handle certificate verification (error %d), shutting down...\n&quot;, val);</span>
-<span class="lineNum">     165 </span><span class="lineNoCov">          0 :                 return; // give the program a chance to switch to fallback</span>
-<span class="lineNum">     166 </span>            :         }
-<span class="lineNum">     167 </span>            : 
-<span class="lineNum">     168 </span>            :         // set alert callback
-<span class="lineNum">     169 </span><span class="lineCov">        144 :         SSL_set_info_callback(ssl, ssl_alert_callback);</span>
-<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     152 </span><span class="lineCov">        149 : char *get_cert_file(void) {</span>
+<span class="lineNum">     153 </span><span class="lineCov">        149 :         if (arg_certfile)</span>
+<span class="lineNum">     154 </span><span class="lineNoCov">          0 :                 return arg_certfile;</span>
+<span class="lineNum">     155 </span>            : 
+<span class="lineNum">     156 </span><span class="lineCov">        149 :         int i = 0;</span>
+<span class="lineNum">     157 </span><span class="lineCov">        149 :         while (certlist[i]) {</span>
+<span class="lineNum">     158 </span>            :                 struct stat s;
+<span class="lineNum">     159 </span><span class="lineCov">        149 :                 if (stat(certlist[i], &amp;s) == 0)</span>
+<span class="lineNum">     160 </span><span class="lineCov">        149 :                         return certlist[i];</span>
+<span class="lineNum">     161 </span><span class="lineNoCov">          0 :                 i++;</span>
+<span class="lineNum">     162 </span>            :         }
+<span class="lineNum">     163 </span>            : 
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<a name="165"><span class="lineNum">     165 </span>            : }</a>
+<span class="lineNum">     166 </span>            : 
+<span class="lineNum">     167 </span><span class="lineCov">        151 : void ssl_open(void) {</span>
+<span class="lineNum">     168 </span><span class="lineCov">        151 :         assert(ssl_state == SSL_CLOSED);</span>
+<span class="lineNum">     169 </span><span class="lineCov">        151 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">     170 </span><span class="lineCov">        151 :         assert(srv);</span>
 <span class="lineNum">     171 </span>            : 
-<span class="lineNum">     172 </span><span class="lineCov">        144 :         ssl_state = SSL_OPEN;</span>
-<span class="lineNum">     173 </span><span class="lineCov">        144 :         rlogprintf(&quot;SSL connection opened\n&quot;);</span>
-<a name="174"><span class="lineNum">     174 </span>            : }</a>
-<span class="lineNum">     175 </span>            : 
-<span class="lineNum">     176 </span><span class="lineNoCov">          0 : void ssl_close(void) {</span>
-<span class="lineNum">     177 </span><span class="lineNoCov">          0 :         if (ssl) {</span>
-<span class="lineNum">     178 </span><span class="lineNoCov">          0 :                 int rv = SSL_shutdown(ssl);</span>
-<span class="lineNum">     179 </span><span class="lineNoCov">          0 :                 if (rv == 0)</span>
-<span class="lineNum">     180 </span><span class="lineNoCov">          0 :                         SSL_shutdown(ssl);</span>
-<span class="lineNum">     181 </span><span class="lineNoCov">          0 :                 SSL_free(ssl);</span>
-<span class="lineNum">     182 </span>            :         }
-<span class="lineNum">     183 </span>            : 
-<span class="lineNum">     184 </span><span class="lineNoCov">          0 :         ssl = NULL;</span>
-<span class="lineNum">     185 </span><span class="lineNoCov">          0 :         ssl_state = SSL_CLOSED;</span>
-<span class="lineNum">     186 </span><span class="lineNoCov">          0 :         rlogprintf(&quot;SSL connection closed\n&quot;);</span>
-<span class="lineNum">     187 </span><span class="lineNoCov">          0 : }</span>
-<a name="188"><span class="lineNum">     188 </span>            : </a>
-<span class="lineNum">     189 </span>            : // returns the length of the response,0 if failed
-<span class="lineNum">     190 </span><span class="lineCov">        368 : int ssl_rxtx_dns(uint8_t *msg, int cnt) {</span>
-<span class="lineNum">     191 </span><span class="lineCov">        368 :         assert(msg);</span>
-<span class="lineNum">     192 </span>            : 
-<span class="lineNum">     193 </span><span class="lineCov">        368 :         DnsServer *srv = server_get();</span>
-<span class="lineNum">     194 </span><span class="lineCov">        368 :         assert(srv);</span>
+<span class="lineNum">     172 </span><span class="lineCov">        151 :         if (arg_fallback_only)</span>
+<span class="lineNum">     173 </span><span class="lineCov">        151 :                 return;</span>
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span><span class="lineCov">        149 :         if (arg_debug)</span>
+<span class="lineNum">     176 </span><span class="lineCov">          7 :                 printf(&quot;%d: opening ssl connection\n&quot;, arg_id);</span>
+<span class="lineNum">     177 </span><span class="lineCov">        149 :         fflush(0);</span>
+<span class="lineNum">     178 </span>            : 
+<span class="lineNum">     179 </span><span class="lineCov">        149 :         if (ctx == NULL) {</span>
+<span class="lineNum">     180 </span><span class="lineCov">        149 :                 ctx = SSL_CTX_new(TLS_client_method());</span>
+<span class="lineNum">     181 </span><span class="lineCov">        149 :                 char *certfile = get_cert_file();</span>
+<span class="lineNum">     182 </span><span class="lineCov">        149 :                 if (certfile == NULL) {</span>
+<span class="lineNum">     183 </span><span class="lineNoCov">          0 :                         if(! SSL_CTX_load_verify_locations(ctx, NULL, &quot;/etc/ssl/certs&quot;)) {</span>
+<span class="lineNum">     184 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: cannot find SSL certificates in /etc/ssl/certs\n&quot;);</span>
+<span class="lineNum">     185 </span><span class="lineNoCov">          0 :                                 return;</span>
+<span class="lineNum">     186 </span>            :                         }
+<span class="lineNum">     187 </span>            :                 }
+<span class="lineNum">     188 </span>            :                 else {
+<span class="lineNum">     189 </span><span class="lineCov">        149 :                         if(! SSL_CTX_load_verify_locations(ctx, certfile, NULL)) {</span>
+<span class="lineNum">     190 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: cannot find SSL certificate %s\n&quot;, certfile);</span>
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :                                 return;</span>
+<span class="lineNum">     192 </span>            :                         }
+<span class="lineNum">     193 </span>            :                 }
+<span class="lineNum">     194 </span>            :         }
 <span class="lineNum">     195 </span>            : 
-<span class="lineNum">     196 </span><span class="lineCov">        368 :         if (ssl == NULL || ssl_state != SSL_OPEN)</span>
-<span class="lineNum">     197 </span><span class="lineCov">          1 :                 return 0;</span>
+<span class="lineNum">     196 </span><span class="lineCov">        149 :         if (arg_debug)</span>
+<span class="lineNum">     197 </span><span class="lineCov">          7 :                 printf(&quot;%d: arg_transport %s, srv-&gt;transport %s\n&quot;, arg_id, arg_transport, srv-&gt;transport);</span>
 <span class="lineNum">     198 </span>            : 
-<span class="lineNum">     199 </span><span class="lineCov">        367 :         assert(bio);</span>
-<span class="lineNum">     200 </span><span class="lineCov">        367 :         assert(ctx);</span>
-<span class="lineNum">     201 </span><span class="lineCov">        367 :         assert(ssl);</span>
-<span class="lineNum">     202 </span>            : 
-<span class="lineNum">     203 </span>            :         char buf[MAXBUF];
-<span class="lineNum">     204 </span><span class="lineCov">        367 :         sprintf(buf, srv-&gt;request, cnt);</span>
-<span class="lineNum">     205 </span><span class="lineCov">        367 :         int len = strlen(buf);</span>
-<span class="lineNum">     206 </span><span class="lineCov">        367 :         assert(cnt &lt; MAXBUF - len);</span>
-<span class="lineNum">     207 </span>            : 
-<span class="lineNum">     208 </span><span class="lineCov">        367 :         memcpy(buf + len, msg, cnt);</span>
-<span class="lineNum">     209 </span><span class="lineCov">        367 :         len += cnt;</span>
-<span class="lineNum">     210 </span>            : 
-<span class="lineNum">     211 </span><span class="lineCov">        367 :         if (arg_debug)</span>
-<span class="lineNum">     212 </span><span class="lineCov">         18 :                 printf(&quot;(%d) *** SSL transaction ***\n&quot;, arg_id);</span>
-<span class="lineNum">     213 </span>            : 
-<span class="lineNum">     214 </span>            :         int lentx;
-<span class="lineNum">     215 </span><span class="lineCov">        367 :         if((lentx = BIO_write(bio, buf, len)) &lt;= 0) {</span>
-<span class="lineNum">     216 </span><span class="lineNoCov">          0 :                 if(! BIO_should_retry(bio)) {</span>
-<span class="lineNum">     217 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL write, retval %d\n&quot;, lentx);</span>
-<span class="lineNum">     218 </span><span class="lineNoCov">          0 :                         goto errout;</span>
-<span class="lineNum">     219 </span>            :                 }
-<span class="lineNum">     220 </span><span class="lineNoCov">          0 :                 if((lentx = BIO_write(bio, buf, len)) &lt;= 0) {</span>
-<span class="lineNum">     221 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL write, retval %d\n&quot;, lentx);</span>
-<span class="lineNum">     222 </span><span class="lineNoCov">          0 :                         goto errout;</span>
-<span class="lineNum">     223 </span>            :                 }
-<span class="lineNum">     224 </span>            :         }
-<span class="lineNum">     225 </span>            : 
-<span class="lineNum">     226 </span><span class="lineCov">        367 :         if (arg_debug)</span>
-<span class="lineNum">     227 </span><span class="lineCov">         18 :                 printf(&quot;(%d) SSL write %d/%d bytes\n&quot;, arg_id, len, lentx);</span>
-<span class="lineNum">     228 </span>            : 
-<span class="lineNum">     229 </span><span class="lineCov">        367 :         len = BIO_read(bio, buf, MAXBUF);</span>
-<span class="lineNum">     230 </span><span class="lineCov">        367 :         if(len &lt;= 0) {</span>
-<span class="lineNum">     231 </span><span class="lineNoCov">          0 :                 if(! BIO_should_retry(bio)) {</span>
-<span class="lineNum">     232 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL read, retval %d\n&quot;, len);</span>
-<span class="lineNum">     233 </span><span class="lineNoCov">          0 :                         goto errout;</span>
-<span class="lineNum">     234 </span>            :                 }
-<span class="lineNum">     235 </span><span class="lineNoCov">          0 :                 len = BIO_read(bio, buf, MAXBUF);</span>
-<span class="lineNum">     236 </span><span class="lineNoCov">          0 :                 if(len &lt;= 0) {</span>
-<span class="lineNum">     237 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL read, retval %d\n&quot;, len);</span>
-<span class="lineNum">     238 </span><span class="lineNoCov">          0 :                         goto errout;</span>
-<span class="lineNum">     239 </span>            :                 }
-<span class="lineNum">     240 </span>            :         }
-<span class="lineNum">     241 </span><span class="lineCov">        367 :         buf[len] = '\0';</span>
-<span class="lineNum">     242 </span>            : 
-<span class="lineNum">     243 </span>            :         // check 200 OK
-<span class="lineNum">     244 </span><span class="lineCov">        367 :         char *ptr = strstr(buf, &quot;200 OK&quot;);</span>
-<span class="lineNum">     245 </span><span class="lineCov">        367 :         if (!ptr) {</span>
-<span class="lineNum">     246 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: HTTP error, 200 OK not received\n&quot;);</span>
-<span class="lineNum">     247 </span><span class="lineNoCov">          0 :                 printf(&quot;**************\n%s\n**************\n&quot;, buf);</span>
-<span class="lineNum">     248 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
-<span class="lineNum">     249 </span><span class="lineNoCov">          0 :                 goto errout;</span>
-<span class="lineNum">     250 </span>            :         }
-<span class="lineNum">     251 </span>            : 
-<span class="lineNum">     252 </span>            :         // look for the end of http header
-<span class="lineNum">     253 </span><span class="lineCov">        367 :         ptr = strstr(buf, &quot;\r\n\r\n&quot;);</span>
-<span class="lineNum">     254 </span><span class="lineCov">        367 :         if (!ptr) {</span>
-<span class="lineNum">     255 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: cannot parse HTTPS response, didn't recieve a full http header\n&quot;);</span>
-<span class="lineNum">     256 </span><span class="lineNoCov">          0 :                 printf(&quot;**************\n%s\n**************\n&quot;, buf);</span>
-<span class="lineNum">     257 </span><span class="lineNoCov">          0 :                 fflush(0);</span>
-<span class="lineNum">     258 </span><span class="lineNoCov">          0 :                 goto errout;</span>
-<span class="lineNum">     259 </span>            :         }
-<span class="lineNum">     260 </span><span class="lineCov">        367 :         ptr += 4; // length of &quot;\r\n\r\n&quot;</span>
-<span class="lineNum">     261 </span><span class="lineCov">        367 :         ptrdiff_t hlen = ptr - buf; // +4 is the length of \r\n\r\n</span>
-<span class="lineNum">     262 </span><span class="lineCov">        367 :         *(ptr - 1) = 0;</span>
-<span class="lineNum">     263 </span><span class="lineCov">        367 :         if (arg_debug)</span>
-<span class="lineNum">     264 </span><span class="lineCov">         18 :                 printf(&quot;(%d) http header:\n%s&quot;, arg_id, buf);</span>
-<span class="lineNum">     265 </span>            : 
-<span class="lineNum">     266 </span>            :         // look for Content-Length:
-<span class="lineNum">     267 </span><span class="lineCov">        367 :         char *contlen = &quot;Content-Length: &quot;;</span>
-<span class="lineNum">     268 </span><span class="lineCov">        367 :         ptr = strcasestr(buf, contlen);</span>
-<span class="lineNum">     269 </span><span class="lineCov">        367 :         int datalen = 0;</span>
-<span class="lineNum">     270 </span><span class="lineCov">        367 :         if (!ptr) {</span>
-<span class="lineNum">     271 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: cannot parse HTTPS response, content-length missing\n&quot;);</span>
-<span class="lineNum">     272 </span><span class="lineNoCov">          0 :                 print_mem((uint8_t *) buf, len);</span>
-<span class="lineNum">     273 </span><span class="lineNoCov">          0 :                 goto errout;</span>
-<span class="lineNum">     274 </span>            :         }
-<span class="lineNum">     275 </span>            :         else {
-<span class="lineNum">     276 </span><span class="lineCov">        367 :                 ptr += strlen(contlen);</span>
-<span class="lineNum">     277 </span><span class="lineCov">        367 :                 sscanf(ptr, &quot;%d&quot;, &amp;datalen);</span>
-<span class="lineNum">     278 </span><span class="lineCov">        367 :                 if (datalen == 0) // we got a &quot;Content-lenght: 0&quot;; this is probably a HTTP error</span>
-<span class="lineNum">     279 </span><span class="lineNoCov">          0 :                         return 0;</span>
-<span class="lineNum">     280 </span>            :         }
-<span class="lineNum">     281 </span>            : 
-<span class="lineNum">     282 </span>            :         // do we need to read more data?
-<span class="lineNum">     283 </span><span class="lineCov">        367 :         int totallen = (int) hlen + datalen;</span>
-<span class="lineNum">     284 </span><span class="lineCov">        367 :         if (arg_debug)</span>
-<span class="lineNum">     285 </span><span class="lineCov">         18 :                 printf(&quot;(%d) SSL read len %d, totallen %d, datalen %d\n&quot;,</span>
-<span class="lineNum">     286 </span>            :                        arg_id, len, totallen, datalen);
-<span class="lineNum">     287 </span><span class="lineCov">        367 :         if (totallen &gt;= MAXBUF) {</span>
-<span class="lineNum">     288 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: cannot parse HTTPS response, invalid length\n&quot;);</span>
-<span class="lineNum">     289 </span><span class="lineNoCov">          0 :                 print_mem((uint8_t *) buf, len);</span>
-<span class="lineNum">     290 </span><span class="lineNoCov">          0 :                 goto errout;</span>
-<span class="lineNum">     291 </span>            :         }
-<span class="lineNum">     292 </span>            : 
-<span class="lineNum">     293 </span><span class="lineCov">        396 :         while (len &lt; totallen) {</span>
-<span class="lineNum">     294 </span><span class="lineCov">         29 :                 int rv = BIO_read(bio, buf + len, totallen - len);</span>
-<span class="lineNum">     295 </span><span class="lineCov">         29 :                 if (arg_debug)</span>
-<span class="lineNum">     296 </span><span class="lineNoCov">          0 :                         printf(&quot;(%d) SSL read + %d\n&quot;, arg_id, rv);</span>
-<span class="lineNum">     297 </span><span class="lineCov">         29 :                 if(rv &lt;= 0) {</span>
-<span class="lineNum">     298 </span><span class="lineNoCov">          0 :                         if(! BIO_should_retry(bio)) {</span>
-<span class="lineNum">     299 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: failed SSL read\n&quot;);</span>
-<span class="lineNum">     300 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
-<span class="lineNum">     301 </span>            :                         }
-<span class="lineNum">     302 </span><span class="lineNoCov">          0 :                         rv = BIO_read(bio, buf, MAXBUF);</span>
-<span class="lineNum">     303 </span><span class="lineNoCov">          0 :                         if (arg_debug)</span>
-<span class="lineNum">     304 </span><span class="lineNoCov">          0 :                                 printf(&quot;(%d) SSL read + %d\n&quot;, arg_id, rv);</span>
-<span class="lineNum">     305 </span><span class="lineNoCov">          0 :                         if(rv &lt;= 0) {</span>
-<span class="lineNum">     306 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: SSL connection is probably closed\n&quot;);</span>
-<span class="lineNum">     307 </span><span class="lineNoCov">          0 :                                 goto errout;</span>
-<span class="lineNum">     308 </span>            :                         }
-<span class="lineNum">     309 </span>            :                 }
-<span class="lineNum">     310 </span>            : 
-<span class="lineNum">     311 </span><span class="lineCov">         29 :                 len += rv;</span>
-<span class="lineNum">     312 </span>            :         }
-<span class="lineNum">     313 </span>            : 
-<span class="lineNum">     314 </span>            :         // copy the response in buf
-<span class="lineNum">     315 </span><span class="lineCov">        367 :         memcpy(msg, buf + len - datalen, datalen);</span>
-<span class="lineNum">     316 </span><span class="lineCov">        367 :         if (arg_debug) {</span>
-<span class="lineNum">     317 </span><span class="lineCov">         18 :                 printf(&quot;(%d) DNS data:\n&quot;, arg_id);</span>
-<span class="lineNum">     318 </span><span class="lineCov">         18 :                 print_mem((uint8_t *) buf, datalen);</span>
-<span class="lineNum">     319 </span><span class="lineCov">         18 :                 printf(&quot;(%d) *** SSL transaction end ***\n&quot;, arg_id);</span>
-<span class="lineNum">     320 </span>            :         }
-<span class="lineNum">     321 </span>            : 
-<span class="lineNum">     322 </span>            :         //
-<span class="lineNum">     323 </span>            :         // partial response parsing
-<span class="lineNum">     324 </span>            :         //
-<span class="lineNum">     325 </span><span class="lineCov">        367 :         if (lint_rx(msg, datalen)) {</span>
-<span class="lineNum">     326 </span><span class="lineCov">          1 :                 if (lint_error() == DNSERR_NXDOMAIN) {</span>
-<span class="lineNum">     327 </span>            :                         // NXDOMAIN or similar received, cache for 10 minutes
-<span class="lineNum">     328 </span><span class="lineNoCov">          0 :                         cache_set_reply(msg, datalen, CACHE_TTL_ERROR);</span>
-<span class="lineNum">     329 </span><span class="lineNoCov">          0 :                         return datalen;</span>
-<span class="lineNum">     330 </span>            :                 }
-<span class="lineNum">     331 </span>            : 
-<span class="lineNum">     332 </span>            :                 // serveral adblocker/family services return addresses of 0.0.0.0 or 127.0.0.1 for blocked domains
-<span class="lineNum">     333 </span><span class="lineCov">          1 :                 const char *str = lint_err2str();</span>
-<span class="lineNum">     334 </span><span class="lineCov">          1 :                 if (strstr(str, &quot;0.0.0.0&quot;) || strstr(str, &quot;127.0.0.1&quot;)) {</span>
-<span class="lineNum">     335 </span>            :                         // set NXDOMAIN bytes in the packet
-<span class="lineNum">     336 </span><span class="lineNoCov">          0 :                         msg[3] = 3;</span>
-<span class="lineNum">     337 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;%s refused by service provider\n&quot;, cache_get_name());</span>
-<span class="lineNum">     338 </span><span class="lineNoCov">          0 :                         return datalen;</span>
-<span class="lineNum">     339 </span>            :                 }
-<span class="lineNum">     340 </span>            :                 else
-<span class="lineNum">     341 </span><span class="lineCov">          1 :                         rlogprintf(&quot;Error: %s %s\n&quot;, lint_err2str(), cache_get_name());</span>
-<span class="lineNum">     342 </span><span class="lineCov">          1 :                 return 0;</span>
-<span class="lineNum">     343 </span>            :         }
-<span class="lineNum">     344 </span>            : 
-<span class="lineNum">     345 </span>            :         // cache the response and exit
-<span class="lineNum">     346 </span><span class="lineCov">        366 :         cache_set_reply(msg, datalen, arg_cache_ttl);</span>
-<span class="lineNum">     347 </span><span class="lineCov">        366 :         return datalen;</span>
+<span class="lineNum">     199 </span><span class="lineCov">        149 :         int dot = 0;</span>
+<span class="lineNum">     200 </span><span class="lineCov">        149 :         if (arg_transport == NULL &amp;&amp; srv-&gt;transport &amp;&amp; strstr(srv-&gt;transport, &quot;dot&quot;)) {</span>
+<span class="lineNum">     201 </span>            : //              SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)&quot;\x03dot&quot;, 4);
+<span class="lineNum">     202 </span><span class="lineCov">          1 :                 dns_set_transport(&quot;dot&quot;);</span>
+<span class="lineNum">     203 </span><span class="lineCov">          1 :                 dot = 1;</span>
+<span class="lineNum">     204 </span><span class="lineCov">          1 :                 if (arg_debug)</span>
+<span class="lineNum">     205 </span><span class="lineNoCov">          0 :                         printf(&quot;%d: No ALPN configured\n&quot;, arg_id);</span>
+<span class="lineNum">     206 </span>            :         }
+<span class="lineNum">     207 </span><span class="lineCov">        148 :         else if (arg_transport == NULL) {</span>
+<span class="lineNum">     208 </span>            :                 // inform the server we prefer http2 over http/1.1
+<span class="lineNum">     209 </span><span class="lineCov">        134 :                 SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)&quot;\x02h2\x08http/1.1&quot;, 12);</span>
+<span class="lineNum">     210 </span><span class="lineCov">        134 :                 if (arg_debug)</span>
+<span class="lineNum">     211 </span><span class="lineCov">          7 :                         printf(&quot;%d: Send ALPN h2, http/1.1\n&quot;, arg_id);</span>
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span>            :         }
+<span class="lineNum">     214 </span><span class="lineCov">         14 :         else if (strstr(arg_transport, &quot;dot&quot;)) {</span>
+<span class="lineNum">     215 </span>            : //              SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)&quot;\x03dot&quot;, 4);
+<span class="lineNum">     216 </span><span class="lineCov">          6 :                 dns_set_transport(&quot;dot&quot;);</span>
+<span class="lineNum">     217 </span><span class="lineCov">          6 :                 dot = 1;</span>
+<span class="lineNum">     218 </span><span class="lineCov">          6 :                 if (arg_debug)</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :                         printf(&quot;%d: No ALPN configured\n&quot;, arg_id);</span>
+<span class="lineNum">     220 </span>            :         }
+<span class="lineNum">     221 </span><span class="lineCov">          8 :         else if (strstr(arg_transport, &quot;h2&quot;)) {</span>
+<span class="lineNum">     222 </span><span class="lineCov">          3 :                 SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)&quot;\x02h2&quot;, 3);</span>
+<span class="lineNum">     223 </span><span class="lineCov">          3 :                 if (arg_debug)</span>
+<span class="lineNum">     224 </span><span class="lineNoCov">          0 :                         printf(&quot;%d: Send ALPN h2\n&quot;, arg_id);</span>
+<span class="lineNum">     225 </span>            :         }
+<span class="lineNum">     226 </span><span class="lineCov">          5 :         else if (strstr(arg_transport, &quot;http/1.1&quot;)) {</span>
+<span class="lineNum">     227 </span>            :                 // ALPN was mandated starting with h2, more likely a http/1.1 server won't implement ALPN
+<span class="lineNum">     228 </span>            : //              SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)&quot;\x08http/1.1&quot;, 9);
+<span class="lineNum">     229 </span><span class="lineCov">          5 :                 if (arg_debug)</span>
+<span class="lineNum">     230 </span><span class="lineNoCov">          0 :                         printf(&quot;%d: No ALPN configured\n&quot;, arg_id);</span>
+<span class="lineNum">     231 </span>            :         }
+<span class="lineNum">     232 </span>            :         else
+<span class="lineNum">     233 </span><span class="lineNoCov">          0 :                 assert(0);</span>
+<span class="lineNum">     234 </span>            : 
+<span class="lineNum">     235 </span><span class="lineCov">        149 :         fflush(0);</span>
+<span class="lineNum">     236 </span><span class="lineCov">        149 :         bio = BIO_new_ssl_connect(ctx);</span>
+<span class="lineNum">     237 </span><span class="lineCov">        149 :         BIO_get_ssl(bio, &amp;ssl);</span>
+<span class="lineNum">     238 </span><span class="lineCov">        149 :         SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);</span>
+<span class="lineNum">     239 </span>            : 
+<span class="lineNum">     240 </span>            :         // set connection and SNI
+<span class="lineNum">     241 </span><span class="lineCov">        149 :         BIO_set_conn_hostname(bio, srv-&gt;address);</span>
+<span class="lineNum">     242 </span><span class="lineCov">        149 :         if (srv-&gt;test_sni)</span>
+<span class="lineNum">     243 </span>            :                 ; // testing sni: first try goes without any sni
+<span class="lineNum">     244 </span><span class="lineCov">        146 :         else if (srv-&gt;sni)</span>
+<span class="lineNum">     245 </span><span class="lineCov">          7 :                 SSL_set_tlsext_host_name(ssl, srv-&gt;host);</span>
+<span class="lineNum">     246 </span>            :         else {
+<span class="lineNum">     247 </span>            :                 ; // no sni configured
+<span class="lineNum">     248 </span>            :         }
+<span class="lineNum">     249 </span>            : 
+<span class="lineNum">     250 </span><span class="lineCov">        149 :         if (arg_debug) {</span>
+<span class="lineNum">     251 </span><span class="lineCov">          7 :                 printf(&quot;%d: Connecting to the server %s\n&quot;, arg_id, srv-&gt;address);</span>
+<span class="lineNum">     252 </span><span class="lineCov">          7 :                 fflush(0);</span>
+<span class="lineNum">     253 </span>            :         }
+<span class="lineNum">     254 </span><span class="lineCov">        149 :         if(BIO_do_connect(bio) &lt;= 0) {</span>
+<span class="lineNum">     255 </span>            : //              rlogprintf(&quot;Error: cannot connect SSL.\n&quot;);
+<span class="lineNum">     256 </span><span class="lineNoCov">          0 :                 if (srv-&gt;test_sni) {</span>
+<span class="lineNum">     257 </span>            :                         // try again, this time with sni
+<span class="lineNum">     258 </span><span class="lineNoCov">          0 :                         srv-&gt;test_sni = 0;</span>
+<span class="lineNum">     259 </span><span class="lineNoCov">          0 :                         srv-&gt;sni = 1;</span>
+<span class="lineNum">     260 </span><span class="lineNoCov">          0 :                         usleep(100000);</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :                         return ssl_open();</span>
+<span class="lineNum">     262 </span>            :                 }
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">     265 </span>            :         }
+<span class="lineNum">     266 </span><span class="lineCov">        149 :         if (arg_debug) {</span>
+<span class="lineNum">     267 </span><span class="lineCov">          7 :                 printf(&quot;%d: Server connected!\n&quot;, arg_id);</span>
+<span class="lineNum">     268 </span><span class="lineCov">          7 :                 fflush(0);</span>
+<span class="lineNum">     269 </span>            :         }
+<span class="lineNum">     270 </span>            : 
+<span class="lineNum">     271 </span><span class="lineCov">        149 :         if (arg_details &amp;&amp; arg_id == -1)</span>
+<span class="lineNum">     272 </span><span class="lineCov">          4 :                 transport-&gt;print_url();</span>
+<span class="lineNum">     273 </span>            : //              printf(&quot;   URL: https://%s%s\n&quot;, srv-&gt;host, srv-&gt;path);
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span>            :         uint32_t ip;
+<span class="lineNum">     276 </span><span class="lineCov">        149 :         if (arg_details &amp;&amp; arg_id == -1 &amp;&amp; atoip(srv-&gt;address, &amp;ip) == 0)</span>
+<span class="lineNum">     277 </span><span class="lineCov">          4 :                 printf(&quot;   Bootstrap IP address: %d.%d.%d.%d\n&quot;, PRINT_IP(ip));</span>
+<span class="lineNum">     278 </span><span class="lineCov">        145 :         else if (arg_details &amp;&amp; arg_id == -1 &amp;&amp; arg_test_server) {</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :                 char *domain  = strdup(srv-&gt;address);</span>
+<span class="lineNum">     280 </span><span class="lineNoCov">          0 :                 if (!domain)</span>
+<span class="lineNum">     281 </span><span class="lineNoCov">          0 :                         errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     282 </span><span class="lineNoCov">          0 :                 char *ptr = strchr(domain, ':');</span>
+<span class="lineNum">     283 </span><span class="lineNoCov">          0 :                 if (ptr) {</span>
+<span class="lineNum">     284 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
+<span class="lineNum">     285 </span><span class="lineNoCov">          0 :                         struct hostent *hp = gethostbyname(domain);</span>
+<span class="lineNum">     286 </span><span class="lineNoCov">          0 :                         if (hp) {</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :                                 int i=0;</span>
+<span class="lineNum">     288 </span><span class="lineNoCov">          0 :                                 printf(&quot;   Bootstrap IP address: &quot;);</span>
+<span class="lineNum">     289 </span><span class="lineNoCov">          0 :                                 while ( hp -&gt; h_addr_list[i] != NULL) {</span>
+<span class="lineNum">     290 </span><span class="lineNoCov">          0 :                                         if (i != 0)</span>
+<span class="lineNum">     291 </span><span class="lineNoCov">          0 :                                                 printf(&quot;, &quot;);</span>
+<span class="lineNum">     292 </span><span class="lineNoCov">          0 :                                         printf( &quot;%s&quot;, inet_ntoa( *( struct in_addr*)( hp -&gt; h_addr_list[i])));</span>
+<span class="lineNum">     293 </span><span class="lineNoCov">          0 :                                         i++;</span>
+<span class="lineNum">     294 </span>            :                                 }
+<span class="lineNum">     295 </span><span class="lineNoCov">          0 :                                 printf(&quot;\n&quot;);</span>
+<span class="lineNum">     296 </span>            :                         }
+<span class="lineNum">     297 </span>            :                 }
+<span class="lineNum">     298 </span><span class="lineNoCov">          0 :                 free(domain);</span>
+<span class="lineNum">     299 </span>            :         }
+<span class="lineNum">     300 </span><span class="lineCov">        149 :         char *portstr = strchr(srv-&gt;address, ':');</span>
+<span class="lineNum">     301 </span><span class="lineCov">        149 :         if (portstr &amp;&amp; arg_details &amp;&amp; arg_id == -1)</span>
+<span class="lineNum">     302 </span><span class="lineCov">          4 :                 printf(&quot;   Port: %s\n&quot;, portstr + 1);</span>
+<span class="lineNum">     303 </span>            : 
+<span class="lineNum">     304 </span>            :         int err;
+<span class="lineNum">     305 </span><span class="lineCov">        149 :         if ((err = SSL_get_verify_result(ssl)) != X509_V_OK) {</span>
+<span class="lineNum">     306 </span><span class="lineNoCov">          0 :                 if (arg_allow_self_signed_certs &amp;&amp; err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)</span>
+<span class="lineNum">     307 </span><span class="lineNoCov">          0 :                         printf(&quot;   Warning: %s\n&quot;, X509_verify_cert_error_string(err));</span>
+<span class="lineNum">     308 </span><span class="lineNoCov">          0 :                 else if (arg_allow_expired_certs &amp;&amp; err == X509_V_ERR_CERT_HAS_EXPIRED)</span>
+<span class="lineNum">     309 </span><span class="lineNoCov">          0 :                         printf(&quot;   Warning: %s\n&quot;, X509_verify_cert_error_string(err));</span>
+<span class="lineNum">     310 </span>            :                 else {
+<span class="lineNum">     311 </span><span class="lineNoCov">          0 :                         printf(&quot;   Error: %s\n&quot;, X509_verify_cert_error_string(err));</span>
+<span class="lineNum">     312 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: %s\n&quot;, X509_verify_cert_error_string(err));</span>
+<span class="lineNum">     313 </span><span class="lineNoCov">          0 :                         return;</span>
+<span class="lineNum">     314 </span>            :                 }
+<span class="lineNum">     315 </span>            :         }
+<span class="lineNum">     316 </span>            : 
+<span class="lineNum">     317 </span>            :         // set alert callback
+<span class="lineNum">     318 </span><span class="lineCov">        149 :         SSL_set_info_callback(ssl, ssl_alert_callback);</span>
+<span class="lineNum">     319 </span>            : 
+<span class="lineNum">     320 </span>            :         // check ALPN negotiation
+<span class="lineNum">     321 </span><span class="lineCov">        149 :         const char *ver = SSL_get_version(ssl);</span>
+<span class="lineNum">     322 </span><span class="lineCov">        149 :         if (dot) {</span>
+<span class="lineNum">     323 </span><span class="lineCov">          7 :                 if (arg_details &amp;&amp; arg_id == -1)</span>
+<span class="lineNum">     324 </span><span class="lineCov">          2 :                         printf(&quot;   %s, &quot;, ver);</span>
+<span class="lineNum">     325 </span>            :         }
+<span class="lineNum">     326 </span>            :         else {
+<span class="lineNum">     327 </span><span class="lineCov">        142 :                 unsigned len = 0;</span>
+<span class="lineNum">     328 </span>            :                 const unsigned char *alpn;
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span><span class="lineCov">        142 :                 SSL_get0_alpn_selected(ssl, &amp;alpn, &amp;len);</span>
+<span class="lineNum">     331 </span><span class="lineCov">        142 :                 if (alpn == NULL) {</span>
+<span class="lineNum">     332 </span><span class="lineCov">          6 :                         if ((arg_details &amp;&amp; arg_id == -1) || arg_debug)</span>
+<span class="lineNum">     333 </span><span class="lineCov">          1 :                                 printf(&quot;   %s, ALPN not negotiated - assuming http/1.1\n&quot;, ver);</span>
+<span class="lineNum">     334 </span><span class="lineCov">          6 :                         dns_set_transport(&quot;http/1.1&quot;);</span>
+<span class="lineNum">     335 </span>            :                 }
+<span class="lineNum">     336 </span><span class="lineCov">        136 :                 else if (len &lt; 100) {</span>
+<span class="lineNum">     337 </span>            :                         char http[100 + 1];
+<span class="lineNum">     338 </span><span class="lineCov">        136 :                         memcpy(http, alpn, len);</span>
+<span class="lineNum">     339 </span><span class="lineCov">        136 :                         http[len] = '\0';</span>
+<span class="lineNum">     340 </span><span class="lineCov">        136 :                         if (arg_details &amp;&amp; arg_id == -1)</span>
+<span class="lineNum">     341 </span><span class="lineCov">          1 :                                 printf(&quot;   %s, ALPN %s, &quot;, ver, http);</span>
+<span class="lineNum">     342 </span><span class="lineCov">        136 :                         dns_set_transport(http);</span>
+<span class="lineNum">     343 </span>            :                 }
+<span class="lineNum">     344 </span>            :                 else
+<span class="lineNum">     345 </span><span class="lineNoCov">          0 :                         fprintf(stderr, &quot;Error: invalid ALPN string of length %d\n&quot;, len);</span>
+<span class="lineNum">     346 </span><span class="lineCov">        142 :                 free((char *) alpn);</span>
+<span class="lineNum">     347 </span>            :         }
 <span class="lineNum">     348 </span>            : 
-<span class="lineNum">     349 </span><span class="lineNoCov">          0 : errout:</span>
-<span class="lineNum">     350 </span><span class="lineNoCov">          0 :         ssl_close();</span>
-<span class="lineNum">     351 </span><span class="lineNoCov">          0 :         return 0;</span>
-<span class="lineNum">     352 </span>            : }
+<span class="lineNum">     349 </span><span class="lineCov">        149 :         if (arg_details &amp;&amp; arg_id == -1)</span>
+<span class="lineNum">     350 </span><span class="lineCov">          4 :                 printf(&quot;SNI %s\n&quot;, (srv-&gt;sni)? &quot;yes&quot;: &quot;no&quot;);</span>
+<span class="lineNum">     351 </span>            : 
+<span class="lineNum">     352 </span><span class="lineCov">        149 :         ssl_state = SSL_OPEN;</span>
 <span class="lineNum">     353 </span>            : 
+<span class="lineNum">     354 </span>            : 
+<span class="lineNum">     355 </span>            : 
+<span class="lineNum">     356 </span><span class="lineCov">        149 :         int fd = SSL_get_fd(ssl);</span>
+<span class="lineNum">     357 </span>            :         struct sockaddr_in remote;
+<span class="lineNum">     358 </span><span class="lineCov">        149 :         memset(&amp;remote, 0, sizeof(remote));</span>
+<span class="lineNum">     359 </span><span class="lineCov">        149 :         socklen_t addrlen_remote = sizeof(remote);</span>
+<span class="lineNum">     360 </span><span class="lineCov">        149 :         if (getpeername(fd, (struct sockaddr *) &amp;remote, &amp;addrlen_remote))</span>
+<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;SSL connection opened\n&quot;);</span>
+<span class="lineNum">     362 </span>            :         else {
+<span class="lineNum">     363 </span><span class="lineCov">        149 :                 uint32_t ip = ntohl(remote.sin_addr.s_addr);</span>
+<span class="lineNum">     364 </span><span class="lineCov">        149 :                 rlogprintf(&quot;SSL connection opened to %d.%d.%d.%d\n&quot;, PRINT_IP(ip));</span>
+<span class="lineNum">     365 </span>            :         }
+<span class="lineNum">     366 </span>            : 
+<span class="lineNum">     367 </span>            :         // transport connect
+<span class="lineNum">     368 </span><span class="lineCov">        149 :         transport-&gt;init();</span>
+<span class="lineNum">     369 </span><span class="lineCov">        149 :         if (transport-&gt;connect() == -1)</span>
+<span class="lineNum">     370 </span><span class="lineNoCov">          0 :                 goto errh2;</span>
+<span class="lineNum">     371 </span>            : 
+<span class="lineNum">     372 </span>            :         // ... followed by a simple query
+<span class="lineNum">     373 </span>            :         uint8_t msg[MAXBUF];
+<span class="lineNum">     374 </span><span class="lineCov">        149 :         unsigned len = transport-&gt;send_exampledotcom(msg);</span>
+<span class="lineNum">     375 </span>            :         // some servers return NXDOMAIN for example.com
+<span class="lineNum">     376 </span><span class="lineCov">        149 :         if (len &lt;= 0 || (lint_rx(msg, len) &amp;&amp; lint_error() != DNSERR_NXDOMAIN))</span>
+<span class="lineNum">     377 </span><span class="lineNoCov">          0 :                 goto errh2;</span>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">        149 :         rlogprintf(&quot;%s transport up\n&quot;, dns_get_transport());</span>
+<span class="lineNum">     380 </span><span class="lineCov">        149 :         return;</span>
+<span class="lineNum">     381 </span>            : 
+<span class="lineNum">     382 </span><span class="lineNoCov">          0 : errh2:</span>
+<span class="lineNum">     383 </span><span class="lineNoCov">          0 :         rlogprintf(&quot;%s transport failed\n&quot;, dns_get_transport());</span>
+<span class="lineNum">     384 </span><span class="lineNoCov">          0 :         ssl_state = SSL_CLOSED;</span>
+<span class="lineNum">     385 </span><span class="lineNoCov">          0 :         ssl_close();</span>
+<a name="386"><span class="lineNum">     386 </span>            : }</a>
+<span class="lineNum">     387 </span>            : 
+<span class="lineNum">     388 </span><span class="lineCov">         13 : void ssl_close(void) {</span>
+<span class="lineNum">     389 </span><span class="lineCov">         13 :         if (ssl_state == SSL_OPEN)</span>
+<span class="lineNum">     390 </span><span class="lineCov">         13 :                 rlogprintf(&quot;SSL connection closed\n&quot;);</span>
+<span class="lineNum">     391 </span><span class="lineCov">         13 :         transport-&gt;close();</span>
+<span class="lineNum">     392 </span><span class="lineCov">         13 :         if (ssl) {</span>
+<span class="lineNum">     393 </span><span class="lineCov">         13 :                 SSL_shutdown(ssl);</span>
+<span class="lineNum">     394 </span><span class="lineCov">         13 :                 SSL_free(ssl);</span>
+<span class="lineNum">     395 </span>            :         }
+<span class="lineNum">     396 </span>            : 
+<span class="lineNum">     397 </span><span class="lineCov">         13 :         ssl = NULL;</span>
+<span class="lineNum">     398 </span><span class="lineCov">         13 :         ssl_state = SSL_CLOSED;</span>
+<span class="lineNum">     399 </span>            : 
+<span class="lineNum">     400 </span>            :         // clear DNS cache
+<span class="lineNum">     401 </span><span class="lineCov">         13 :         cache_init();</span>
+<a name="402"><span class="lineNum">     402 </span><span class="lineCov">         13 : }</span></a>
+<span class="lineNum">     403 </span>            : 
+<span class="lineNum">     404 </span><span class="lineCov">       1145 : int ssl_get_socket(void) {</span>
+<span class="lineNum">     405 </span><span class="lineCov">       1145 :         return SSL_get_fd(ssl);</span>
+<a name="406"><span class="lineNum">     406 </span>            : }</a>
+<span class="lineNum">     407 </span>            : 
+<span class="lineNum">     408 </span><span class="lineCov">        627 : int ssl_tx(uint8_t *buf, int len) {</span>
+<span class="lineNum">     409 </span><span class="lineCov">        627 :         assert(buf);</span>
+<span class="lineNum">     410 </span><span class="lineCov">        627 :         assert(len);</span>
+<span class="lineNum">     411 </span>            : 
+<span class="lineNum">     412 </span><span class="lineCov">        627 :         if (ctx == NULL || ssl == NULL || ssl_state != SSL_OPEN)</span>
+<span class="lineNum">     413 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     414 </span>            : 
+<span class="lineNum">     415 </span><span class="lineCov">        627 :         assert(bio);</span>
+<span class="lineNum">     416 </span><span class="lineCov">        627 :         assert(ctx);</span>
+<span class="lineNum">     417 </span><span class="lineCov">        627 :         assert(ssl);</span>
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span><span class="lineCov">        627 :         if (arg_debug_ssl || arg_debug) {</span>
+<span class="lineNum">     420 </span><span class="lineCov">         34 :                 print_time();</span>
+<span class="lineNum">     421 </span><span class="lineCov">         34 :                 printf(&quot;(%d) ssl tx len %u\n&quot;, arg_id, len);</span>
+<span class="lineNum">     422 </span>            :         }
+<span class="lineNum">     423 </span>            : 
+<span class="lineNum">     424 </span>            :         int lentx;
+<span class="lineNum">     425 </span><span class="lineCov">        627 :         if((lentx = BIO_write(bio, buf, len)) &lt;= 0) {</span>
+<span class="lineNum">     426 </span><span class="lineNoCov">          0 :                 if(! BIO_should_retry(bio)) {</span>
+<span class="lineNum">     427 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL write, retval %d\n&quot;, lentx);</span>
+<span class="lineNum">     428 </span><span class="lineNoCov">          0 :                         goto errout;</span>
+<span class="lineNum">     429 </span>            :                 }
+<span class="lineNum">     430 </span><span class="lineNoCov">          0 :                 if((lentx = BIO_write(bio, buf, len)) &lt;= 0) {</span>
+<span class="lineNum">     431 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL write, retval %d\n&quot;, lentx);\</span>
+<span class="lineNum">     432 </span><span class="lineNoCov">          0 :                         goto errout;</span>
+<span class="lineNum">     433 </span>            :                 }
+<span class="lineNum">     434 </span>            :         }
+<span class="lineNum">     435 </span>            : 
+<span class="lineNum">     436 </span><span class="lineCov">        627 :         return lentx;</span>
+<span class="lineNum">     437 </span><span class="lineNoCov">          0 : errout:</span>
+<span class="lineNum">     438 </span><span class="lineNoCov">          0 :         ssl_close();</span>
+<span class="lineNum">     439 </span><span class="lineNoCov">          0 :         return 0;</span>
+<a name="440"><span class="lineNum">     440 </span>            : }</a>
+<span class="lineNum">     441 </span>            : 
+<span class="lineNum">     442 </span><span class="lineCov">       1145 : int ssl_rx(uint8_t *buf, int size) {</span>
+<span class="lineNum">     443 </span><span class="lineCov">       1145 :         assert(buf);</span>
+<span class="lineNum">     444 </span><span class="lineCov">       1145 :         if (size &lt; 1 || ctx == NULL || ssl == NULL || ssl_state != SSL_OPEN)</span>
+<span class="lineNum">     445 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     446 </span>            : 
+<span class="lineNum">     447 </span><span class="lineCov">       1145 :         int len = BIO_read(bio, buf, size - 1);</span>
+<span class="lineNum">     448 </span><span class="lineCov">       1145 :         if(len &lt;= 0) {</span>
+<span class="lineNum">     449 </span><span class="lineNoCov">          0 :                 if(! BIO_should_retry(bio)) {</span>
+<span class="lineNum">     450 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL read, retval %d\n&quot;, len);</span>
+<span class="lineNum">     451 </span><span class="lineNoCov">          0 :                         goto errout;</span>
+<span class="lineNum">     452 </span>            :                 }
+<span class="lineNum">     453 </span><span class="lineNoCov">          0 :                 len = BIO_read(bio, buf, MAXBUF);</span>
+<span class="lineNum">     454 </span><span class="lineNoCov">          0 :                 if(len &lt;= 0) {</span>
+<span class="lineNum">     455 </span><span class="lineNoCov">          0 :                         rlogprintf(&quot;Error: failed SSL read, retval %d\n&quot;, len);</span>
+<span class="lineNum">     456 </span><span class="lineNoCov">          0 :                         goto errout;</span>
+<span class="lineNum">     457 </span>            :                 }
+<span class="lineNum">     458 </span>            :         }
+<span class="lineNum">     459 </span><span class="lineCov">       1145 :         if (arg_debug_ssl || arg_debug) {</span>
+<span class="lineNum">     460 </span><span class="lineCov">         50 :                 print_time();</span>
+<span class="lineNum">     461 </span><span class="lineCov">         50 :                 printf(&quot;(%d) ssl rx len %u\n&quot;, arg_id, len);</span>
+<span class="lineNum">     462 </span>            :         }
+<span class="lineNum">     463 </span><span class="lineCov">       1145 :         buf[len] = '\0';</span>
+<span class="lineNum">     464 </span>            : 
+<span class="lineNum">     465 </span><span class="lineCov">       1145 :         return len;</span>
+<span class="lineNum">     466 </span><span class="lineNoCov">          0 : errout:</span>
+<span class="lineNum">     467 </span><span class="lineNoCov">          0 :         ssl_close();</span>
+<span class="lineNum">     468 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     469 </span>            : }
+<span class="lineNum">     470 </span>            : 
+<a name="471"><span class="lineNum">     471 </span>            : </a>
+<span class="lineNum">     472 </span>            : // return 0 if nothing read, or error
+<span class="lineNum">     473 </span><span class="lineCov">         57 : int ssl_rx_timeout(uint8_t *buf, int size, int timeout) {</span>
+<span class="lineNum">     474 </span>            :         fd_set readfds;
+<span class="lineNum">     475 </span><span class="lineCov">         57 :         FD_ZERO(&amp;readfds);</span>
+<span class="lineNum">     476 </span><span class="lineCov">         57 :         int fd = ssl_get_socket();</span>
+<span class="lineNum">     477 </span><span class="lineCov">         57 :         FD_SET(fd, &amp;readfds);</span>
+<span class="lineNum">     478 </span>            :         struct timeval t;
+<span class="lineNum">     479 </span><span class="lineCov">         57 :         t.tv_sec = timeout;</span>
+<span class="lineNum">     480 </span><span class="lineCov">         57 :         t.tv_usec = 0;</span>
+<span class="lineNum">     481 </span>            : 
+<span class="lineNum">     482 </span><span class="lineCov">         57 :         int rv = select(fd + 1, &amp;readfds, NULL, NULL, &amp;t);</span>
+<span class="lineNum">     483 </span><span class="lineCov">         57 :         if (rv &lt;= 0)</span>
+<span class="lineNum">     484 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     485 </span>            : 
+<span class="lineNum">     486 </span><span class="lineCov">         57 :         if (FD_ISSET(fd, &amp;readfds))</span>
+<span class="lineNum">     487 </span><span class="lineCov">         57 :                 return ssl_rx(buf, size);</span>
+<span class="lineNum">     488 </span>            : 
+<span class="lineNum">     489 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     490 </span>            : }
+<span class="lineNum">     491 </span>            : 
+<span class="lineNum">     492 </span>            : 
+<span class="lineNum">     493 </span>            : 
+<span class="lineNum">     494 </span>            : 
+<span class="lineNum">     495 </span>            : 
 </pre>
       </td>
     </tr>

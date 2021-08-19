@@ -1,0 +1,796 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/h2.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - h2.c<span style="font-size: 80%;"> (source / <a href="h2.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">326</td>
+            <td class="headerCovTableEntry">379</td>
+            <td class="headerCovTableEntryMed">86.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">18</td>
+            <td class="headerCovTableEntry">18</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : #include &lt;stdint.h&gt;
+<span class="lineNum">      20 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      21 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      22 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      23 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      24 </span>            : #include &lt;assert.h&gt;
+<span class="lineNum">      25 </span>            : #include &lt;stddef.h&gt;
+<span class="lineNum">      26 </span>            : #include &quot;lint.h&quot;
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : #include &quot;h2frame.h&quot;
+<span class="lineNum">      29 </span>            : #include &quot;hpack_static.h&quot;
+<span class="lineNum">      30 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : static void h2_header_stats(void);
+<span class="lineNum">      34 </span>            : static double h2_bandwidth(void);
+<span class="lineNum">      35 </span>            : static void h2_init(void);
+<span class="lineNum">      36 </span>            : static void h2_close(void);
+<span class="lineNum">      37 </span>            : static int h2_connect(void);
+<span class="lineNum">      38 </span>            : static int h2_send_exampledotcom(uint8_t *req);
+<span class="lineNum">      39 </span>            : static int h2_send_query(uint8_t *req, int cnt);
+<span class="lineNum">      40 </span>            : static int h2_send_ping(void);
+<span class="lineNum">      41 </span>            : static int h2_exchange(uint8_t *response, uint32_t stream);
+<span class="lineNum">      42 </span>            : static void h2_print_url(void);
+<span class="lineNum">      43 </span>            : DnsTransport h2_transport = {
+<span class="lineNum">      44 </span>            :         &quot;h2&quot;,
+<span class="lineNum">      45 </span>            :         &quot;DoH&quot;,
+<span class="lineNum">      46 </span>            :         h2_init,
+<span class="lineNum">      47 </span>            :         h2_close,
+<span class="lineNum">      48 </span>            :         h2_connect,
+<span class="lineNum">      49 </span>            :         h2_send_exampledotcom,
+<span class="lineNum">      50 </span>            :         h2_send_query,
+<span class="lineNum">      51 </span>            :         h2_send_ping,
+<span class="lineNum">      52 </span>            :         h2_exchange,
+<span class="lineNum">      53 </span>            :         h2_header_stats,
+<span class="lineNum">      54 </span>            :         h2_bandwidth,
+<span class="lineNum">      55 </span>            :         h2_print_url
+<span class="lineNum">      56 </span>            : };
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span>            : 
+<span class="lineNum">      59 </span>            : static unsigned h2_header_total_len = 0;        // accumulated header length
+<span class="lineNum">      60 </span>            : static int h2_header_cnt = 0;           // counting number of headers frames
+<span class="lineNum">      61 </span>            : static int http_header_size = 0;                // header size
+<span class="lineNum">      62 </span>            : static int h2_rx = 0; // received bytes, including IP/TCP/TLS headers
+<span class="lineNum">      63 </span>            : static int h2_rx_dns = 0; // received DNS bytes over H2 plus IP/UDP
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span>            : static uint32_t stream_id;
+<span class="lineNum">      67 </span>            : static int first_header_sent = 0;
+<span class="lineNum">      68 </span>            : static int first_query = 1;     // don't include the first query in network byte count
+<span class="lineNum">      69 </span>            : static int second_query = 0;    // grab the network trace
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            : // network trace
+<span class="lineNum">      73 </span>            : #define PKTBUFMAX 4096
+<a name="74"><span class="lineNum">      74 </span>            : static char pktbuf[4096];</a>
+<span class="lineNum">      75 </span>            : static char *ptrbuf = pktbuf;
+<span class="lineNum">      76 </span><span class="lineCov">       2751 : static void printn(char* fmt, ...) {</span>
+<span class="lineNum">      77 </span><span class="lineCov">       2751 :         if (!second_query)</span>
+<span class="lineNum">      78 </span><span class="lineCov">       2382 :                 return;</span>
+<span class="lineNum">      79 </span><span class="lineCov">        369 :         if ((arg_debug || arg_details) &amp;&amp; arg_id == -1) {</span>
+<span class="lineNum">      80 </span>            :                 // check  space left
+<span class="lineNum">      81 </span><span class="lineCov">         20 :                 ptrdiff_t delta = ptrbuf - pktbuf;</span>
+<span class="lineNum">      82 </span><span class="lineCov">         20 :                 if (delta &gt; (PKTBUFMAX - 1024))</span>
+<span class="lineNum">      83 </span><span class="lineNoCov">          0 :                         return;</span>
+<span class="lineNum">      84 </span>            : 
+<span class="lineNum">      85 </span>            :                 va_list args;
+<span class="lineNum">      86 </span><span class="lineCov">         20 :                 va_start(args,fmt);</span>
+<span class="lineNum">      87 </span><span class="lineCov">         20 :                 vsprintf(ptrbuf, fmt, args);</span>
+<span class="lineNum">      88 </span><span class="lineCov">         20 :                 ptrbuf += strlen(ptrbuf);</span>
+<span class="lineNum">      89 </span><span class="lineCov">         20 :                 va_end(args);</span>
+<span class="lineNum">      90 </span>            :         }
+<a name="91"><span class="lineNum">      91 </span>            : }</a>
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span><span class="lineCov">          2 : static void h2_print_url(void) {</span>
+<span class="lineNum">      94 </span><span class="lineCov">          2 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">      95 </span><span class="lineCov">          2 :         assert(srv);</span>
+<span class="lineNum">      96 </span><span class="lineCov">          2 :         printf(&quot;   URL: https://%s%s\n&quot;, srv-&gt;host, srv-&gt;path);</span>
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">          2 : }</span></a>
+<span class="lineNum">      98 </span>            : 
+<span class="lineNum">      99 </span><span class="lineCov">          1 : static void h2_header_stats(void) {</span>
+<span class="lineNum">     100 </span><span class="lineCov">          1 :         if (http_header_size == 0 || h2_header_cnt == 0)</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">     102 </span><span class="lineCov">          1 :         int average = h2_header_total_len / h2_header_cnt;</span>
+<span class="lineNum">     103 </span><span class="lineCov">          1 :         printf(&quot;   Header uncompressed | compressed | ratio:  %d | %d | %0.02f:1\n&quot;,</span>
+<span class="lineNum">     104 </span>            :                 http_header_size,
+<span class="lineNum">     105 </span>            :                 h2_header_total_len / h2_header_cnt,
+<span class="lineNum">     106 </span><span class="lineCov">          1 :                 (float) http_header_size / (float) average);</span>
+<span class="lineNum">     107 </span>            : }
+<a name="108"><span class="lineNum">     108 </span>            : </a>
+<span class="lineNum">     109 </span>            : // Do53 / DoH ratio
+<span class="lineNum">     110 </span><span class="lineCov">         44 : static double h2_bandwidth(void) {</span>
+<span class="lineNum">     111 </span><span class="lineCov">         44 :         if (h2_rx_dns == 0)</span>
+<span class="lineNum">     112 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     113 </span><span class="lineCov">         44 :         return (double) h2_rx / (double) h2_rx_dns;</span>
+<a name="114"><span class="lineNum">     114 </span>            : }</a>
+<span class="lineNum">     115 </span>            : 
+<span class="lineNum">     116 </span><span class="lineCov">        134 : static void h2_init(void) {</span>
+<span class="lineNum">     117 </span><span class="lineCov">        134 :         first_header_sent = 0;</span>
+<span class="lineNum">     118 </span><span class="lineCov">        134 :         first_query = 1;</span>
+<span class="lineNum">     119 </span><span class="lineCov">        134 :         second_query = 0;</span>
+<a name="120"><span class="lineNum">     120 </span><span class="lineCov">        134 : }</span></a>
+<span class="lineNum">     121 </span>            : 
+<span class="lineNum">     122 </span><span class="lineCov">          9 : static void h2_close(void) {</span>
+<span class="lineNum">     123 </span><span class="lineCov">          9 :         first_header_sent = 0;</span>
+<span class="lineNum">     124 </span><span class="lineCov">          9 :         first_query = 1;</span>
+<span class="lineNum">     125 </span><span class="lineCov">          9 :         second_query = 0;</span>
+<span class="lineNum">     126 </span><span class="lineCov">          9 : }</span>
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span>            : // encode a header frame
+<a name="129"><span class="lineNum">     129 </span>            : // frame - http2 frame</a>
+<span class="lineNum">     130 </span>            : // return offset for the end of frame
+<span class="lineNum">     131 </span><span class="lineCov">        422 : static uint32_t h2_encode_header(uint8_t *frame, int len) {</span>
+<span class="lineNum">     132 </span><span class="lineCov">        422 :         assert(frame);</span>
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span>            :         // server data
+<span class="lineNum">     135 </span><span class="lineCov">        422 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">     136 </span><span class="lineCov">        422 :         assert(srv);</span>
+<span class="lineNum">     137 </span><span class="lineCov">        422 :         assert(srv-&gt;path);</span>
+<span class="lineNum">     138 </span><span class="lineCov">        422 :         assert(srv-&gt;host);</span>
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span><span class="lineCov">        422 :         uint8_t *ptr = frame + sizeof(H2Frame);</span>
+<span class="lineNum">     141 </span>            :         uint8_t sz;
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span>            : //      HEADER(&quot;:method&quot;, &quot;POST&quot;);
+<span class="lineNum">     144 </span><span class="lineCov">        422 :         *ptr++ = 3 | 0x80;</span>
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span>            : //      HEADER(&quot;:path&quot;, srv-&gt;path);
+<span class="lineNum">     147 </span><span class="lineCov">        422 :         if (!first_header_sent) {</span>
+<span class="lineNum">     148 </span><span class="lineCov">        134 :                 *ptr++ = 4 | 0x40;</span>
+<span class="lineNum">     149 </span><span class="lineCov">        134 :                 sz = strlen(srv-&gt;path);</span>
+<span class="lineNum">     150 </span><span class="lineCov">        134 :                 *ptr++ = sz;</span>
+<span class="lineNum">     151 </span><span class="lineCov">        134 :                 memcpy(ptr, srv-&gt;path, sz);</span>
+<span class="lineNum">     152 </span><span class="lineCov">        134 :                 ptr += sz;</span>
+<span class="lineNum">     153 </span>            :         }
+<span class="lineNum">     154 </span>            :         else
+<span class="lineNum">     155 </span><span class="lineCov">        288 :                 *ptr++ = 65 | 0x80;</span>
+<span class="lineNum">     156 </span>            : 
+<span class="lineNum">     157 </span>            : //      HEADER(&quot;:authority&quot;, srv-&gt;host);
+<span class="lineNum">     158 </span><span class="lineCov">        422 :         if (!first_header_sent) {</span>
+<span class="lineNum">     159 </span><span class="lineCov">        134 :                 *ptr++ = 1 | 0x40;</span>
+<span class="lineNum">     160 </span><span class="lineCov">        134 :                 sz = (uint8_t) strlen(srv-&gt;host);</span>
+<span class="lineNum">     161 </span><span class="lineCov">        134 :                 *ptr++ = sz;</span>
+<span class="lineNum">     162 </span><span class="lineCov">        134 :                 memcpy(ptr, srv-&gt;host, sz);</span>
+<span class="lineNum">     163 </span><span class="lineCov">        134 :                 ptr += sz;</span>
+<span class="lineNum">     164 </span>            :         }
+<span class="lineNum">     165 </span>            :         else
+<span class="lineNum">     166 </span><span class="lineCov">        288 :                 *ptr++ = 64 | 0x80;</span>
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span>            : //      HEADER(&quot;:scheme&quot;, &quot;https&quot;);
+<span class="lineNum">     169 </span><span class="lineCov">        422 :         *ptr++ = 7 | 0x80;</span>
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span>            : //      HEADER(&quot;accept&quot;, &quot;application/dns-message&quot;);
+<span class="lineNum">     172 </span><span class="lineCov">        422 :         if (!first_header_sent) {</span>
+<span class="lineNum">     173 </span><span class="lineCov">        134 :                 *ptr++ = 19 | 0x40;</span>
+<span class="lineNum">     174 </span><span class="lineCov">        134 :                 *ptr++ = 23;</span>
+<span class="lineNum">     175 </span><span class="lineCov">        134 :                 memcpy(ptr, &quot;application/dns-message&quot;, 23);</span>
+<span class="lineNum">     176 </span><span class="lineCov">        134 :                 ptr += 23;</span>
+<span class="lineNum">     177 </span>            :         }
+<span class="lineNum">     178 </span>            :         else
+<span class="lineNum">     179 </span><span class="lineCov">        288 :                 *ptr++ = 63 | 0x80;</span>
+<span class="lineNum">     180 </span>            : 
+<span class="lineNum">     181 </span>            : 
+<span class="lineNum">     182 </span>            : //      HEADER(&quot;content-type&quot;, &quot;application/dns-message&quot;);
+<span class="lineNum">     183 </span><span class="lineCov">        422 :         if (!first_header_sent) {</span>
+<span class="lineNum">     184 </span><span class="lineCov">        134 :                 *ptr++ = 31 | 0x40;</span>
+<span class="lineNum">     185 </span><span class="lineCov">        134 :                 *ptr++ = 23;</span>
+<span class="lineNum">     186 </span><span class="lineCov">        134 :                 memcpy(ptr, &quot;application/dns-message&quot;, 23);</span>
+<span class="lineNum">     187 </span><span class="lineCov">        134 :                 ptr += 23;</span>
+<span class="lineNum">     188 </span>            :         }
+<span class="lineNum">     189 </span>            :         else
+<span class="lineNum">     190 </span><span class="lineCov">        288 :                 *ptr++ = 62 | 0x80;</span>
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            : //      HEADER(&quot;content-length&quot;, &quot;56&quot;);
+<span class="lineNum">     193 </span>            :         // Literal Header Field without Indexing - indexed name: 28 (content-length:)
+<span class="lineNum">     194 </span>            :         char slen[20];
+<span class="lineNum">     195 </span><span class="lineCov">        422 :         sprintf(slen, &quot;%d&quot;, len);</span>
+<span class="lineNum">     196 </span><span class="lineCov">        422 :         *ptr++ = 0x0f; // 28 represented as 4-bit encoded</span>
+<span class="lineNum">     197 </span><span class="lineCov">        422 :         *ptr++ = 28 - 15; //13;</span>
+<span class="lineNum">     198 </span><span class="lineCov">        422 :         sz = strlen(slen);</span>
+<span class="lineNum">     199 </span><span class="lineCov">        422 :         *ptr++ = sz;</span>
+<span class="lineNum">     200 </span><span class="lineCov">        422 :         memcpy(ptr, slen, sz);</span>
+<span class="lineNum">     201 </span><span class="lineCov">        422 :         ptr += sz;</span>
+<span class="lineNum">     202 </span>            : 
+<span class="lineNum">     203 </span>            : //disabled      HEADER(&quot;pragma&quot;, &quot;no-cache&quot;);
+<span class="lineNum">     204 </span>            : //disabled      HEADER(&quot;te&quot;, &quot;trailers&quot;);
+<span class="lineNum">     205 </span><span class="lineCov">        422 :         ptrdiff_t length = ptr - (frame + sizeof(H2Frame));</span>
+<span class="lineNum">     206 </span>            : 
+<span class="lineNum">     207 </span>            :         // add the frame header
+<span class="lineNum">     208 </span><span class="lineCov">        422 :         H2Frame *frm = (H2Frame *) frame;</span>
+<span class="lineNum">     209 </span><span class="lineCov">        422 :         h2frame_set_length(frm, length);</span>
+<span class="lineNum">     210 </span><span class="lineCov">        422 :         frm-&gt;type = H2_TYPE_HEADERS;</span>
+<span class="lineNum">     211 </span><span class="lineCov">        422 :         frm-&gt;flag = H2_FLAG_END_HEADERS;</span>
+<span class="lineNum">     212 </span><span class="lineCov">        422 :         h2frame_set_stream(frm, stream_id);</span>
+<span class="lineNum">     213 </span><span class="lineCov">        422 :         first_header_sent = 1;</span>
+<span class="lineNum">     214 </span>            : 
+<span class="lineNum">     215 </span>            : //print_mem(frame, sizeof(H2Frame) + length);
+<span class="lineNum">     216 </span><span class="lineCov">        422 :         return sizeof(H2Frame) + length;</span>
+<span class="lineNum">     217 </span>            : }
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<span class="lineNum">     219 </span>            : // return length of consumed data
+<span class="lineNum">     220 </span><span class="lineCov">       2450 : static int extract_number(uint8_t *ptr, uint8_t prefix, unsigned *value) {</span>
+<span class="lineNum">     221 </span><span class="lineCov">       2450 :         int rv = 1;</span>
+<span class="lineNum">     222 </span><span class="lineCov">       2450 :         unsigned m = 0;</span>
+<span class="lineNum">     223 </span><span class="lineCov">       2450 :         *value = *ptr &amp; prefix;</span>
+<span class="lineNum">     224 </span><span class="lineCov">       2450 :         if (*value == prefix) {</span>
+<span class="lineNum">     225 </span>            :                 do {
+<span class="lineNum">     226 </span><span class="lineCov">        155 :                         ptr++;</span>
+<span class="lineNum">     227 </span><span class="lineCov">        155 :                         *value += ((unsigned) (*ptr &amp; 127)) &lt;&lt; m;</span>
+<span class="lineNum">     228 </span><span class="lineCov">        155 :                         m += 7;</span>
+<span class="lineNum">     229 </span><span class="lineCov">        155 :                         rv++;</span>
+<span class="lineNum">     230 </span>            :                 }
+<span class="lineNum">     231 </span><span class="lineCov">        155 :                 while (*ptr &amp; 0x80);</span>
+<span class="lineNum">     232 </span>            :         }
+<span class="lineNum">     233 </span>            : 
+<span class="lineNum">     234 </span><span class="lineCov">       2450 :         return rv;</span>
+<span class="lineNum">     235 </span>            : }
+<a name="236"><span class="lineNum">     236 </span>            : </a>
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span><span class="lineCov">       4686 : static void printh(char* fmt, ...) {</span>
+<span class="lineNum">     239 </span><span class="lineCov">       4686 :         if ((arg_debug || arg_details) &amp;&amp; arg_id == -1) {</span>
+<span class="lineNum">     240 </span>            :                 va_list args;
+<span class="lineNum">     241 </span><span class="lineCov">        104 :                 va_start(args,fmt);</span>
+<span class="lineNum">     242 </span><span class="lineCov">        104 :                 vprintf(fmt, args);</span>
+<span class="lineNum">     243 </span><span class="lineCov">        104 :                 va_end(args);</span>
+<span class="lineNum">     244 </span>            :         }
+<span class="lineNum">     245 </span><span class="lineCov">       4686 : }</span>
+<a name="246"><span class="lineNum">     246 </span>            : </a>
+<span class="lineNum">     247 </span>            : // return length of consumed data
+<span class="lineNum">     248 </span><span class="lineCov">       1288 : static uint8_t extract_string(uint8_t *ptr) {</span>
+<span class="lineNum">     249 </span>            :         unsigned retval;
+<span class="lineNum">     250 </span>            : //printf(&quot;extract string from 0x%02x\n&quot;, *ptr);
+<span class="lineNum">     251 </span>            :         // string length
+<span class="lineNum">     252 </span><span class="lineCov">       1288 :         if (*ptr &amp; 0x80) { // huiffman encoding</span>
+<span class="lineNum">     253 </span><span class="lineCov">       1041 :                 *ptr &amp;= 0x7f;</span>
+<span class="lineNum">     254 </span>            :                 unsigned value;
+<span class="lineNum">     255 </span><span class="lineCov">       1041 :                 unsigned rv  = extract_number(ptr, 0x7f, &amp;value);</span>
+<span class="lineNum">     256 </span><span class="lineCov">       1041 :                 ptr += rv;</span>
+<span class="lineNum">     257 </span><span class="lineCov">       1041 :                 char *out_str = huffman_search(ptr, value);</span>
+<span class="lineNum">     258 </span><span class="lineCov">       1041 :                 http_header_size += strlen(out_str);</span>
+<span class="lineNum">     259 </span><span class="lineCov">       1041 :                 printh(&quot;  %s&quot;, out_str);</span>
+<span class="lineNum">     260 </span><span class="lineCov">       1041 :                 retval = value + rv;</span>
+<span class="lineNum">     261 </span>            :         }
+<span class="lineNum">     262 </span><span class="lineCov">        247 :         else { // regular string</span>
+<span class="lineNum">     263 </span>            :                 unsigned value;
+<span class="lineNum">     264 </span><span class="lineCov">        247 :                 unsigned rv  = extract_number(ptr, 0x7f, &amp;value);</span>
+<span class="lineNum">     265 </span>            : //printf(&quot;number %u, bytes %u\n&quot;, value, rv);
+<span class="lineNum">     266 </span><span class="lineCov">        247 :                 ptr += rv;</span>
+<span class="lineNum">     267 </span><span class="lineCov">        247 :                 char str[value + 1];</span>
+<span class="lineNum">     268 </span><span class="lineCov">        247 :                 memset(str, 0, value + 1);</span>
+<span class="lineNum">     269 </span><span class="lineCov">        247 :                 memcpy(str, ptr, value);</span>
+<span class="lineNum">     270 </span><span class="lineCov">        247 :                 http_header_size += value;</span>
+<span class="lineNum">     271 </span><span class="lineCov">        247 :                 printh(&quot;  %s&quot;, str);</span>
+<span class="lineNum">     272 </span><span class="lineCov">        247 :                 retval = value + rv;</span>
+<span class="lineNum">     273 </span>            :         }
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span><span class="lineCov">       1288 :         return retval;</span>
+<a name="276"><span class="lineNum">     276 </span>            : }</a>
+<span class="lineNum">     277 </span>            : 
+<span class="lineNum">     278 </span><span class="lineCov">        134 : static void h2_decode_header(uint8_t *frame) {</span>
+<span class="lineNum">     279 </span>            :         // http2 frame
+<span class="lineNum">     280 </span>            :         H2Frame frm;
+<span class="lineNum">     281 </span><span class="lineCov">        134 :         memcpy(&amp;frm, frame, sizeof(H2Frame));</span>
+<span class="lineNum">     282 </span><span class="lineCov">        134 :         if (frm.type != H2_TYPE_HEADERS) {</span>
+<span class="lineNum">     283 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Not a http2 header\n&quot;);</span>
+<span class="lineNum">     284 </span><span class="lineNoCov">          0 :                 assert(0);</span>
+<span class="lineNum">     285 </span>            :                 return;
+<span class="lineNum">     286 </span>            :         }
+<span class="lineNum">     287 </span>            : 
+<span class="lineNum">     288 </span><span class="lineCov">        134 :         if (arg_debug || arg_details)</span>
+<span class="lineNum">     289 </span><span class="lineCov">          8 :                 printf(&quot;-----------------------------\n&quot;);</span>
+<span class="lineNum">     290 </span>            : 
+<span class="lineNum">     291 </span><span class="lineCov">        134 :         size_t len = h2frame_extract_length(&amp;frm);</span>
+<span class="lineNum">     292 </span><span class="lineCov">        134 :         uint8_t *ptr = frame + sizeof(H2Frame);</span>
+<span class="lineNum">     293 </span>            : //print_mem(ptr, len);
+<span class="lineNum">     294 </span><span class="lineCov">        134 :         unsigned cnt = 0;</span>
+<span class="lineNum">     295 </span><span class="lineCov">       1296 :         while (cnt &lt; len) {</span>
+<span class="lineNum">     296 </span><span class="lineCov">       1162 :                 printh(&quot;|&quot;);</span>
+<span class="lineNum">     297 </span>            : //printf(&quot;procesing 0x%02x &quot;, *ptr);
+<span class="lineNum">     298 </span><span class="lineCov">       1162 :                 if (*ptr &amp; 0x80) { // indexed header field</span>
+<span class="lineNum">     299 </span>            :                         unsigned index;
+<span class="lineNum">     300 </span><span class="lineCov">        134 :                         int rv = extract_number(ptr, 0x7f, &amp;index);</span>
+<span class="lineNum">     301 </span><span class="lineCov">        134 :                         HpackStatic *hp = hpack_static_get(index);</span>
+<span class="lineNum">     302 </span><span class="lineCov">        134 :                         if (!hp)</span>
+<span class="lineNum">     303 </span><span class="lineNoCov">          0 :                                 printh(&quot;Unknown indexed header field 0x%02x, position %u\n&quot;, *ptr, cnt);</span>
+<span class="lineNum">     304 </span>            :                         else {
+<span class="lineNum">     305 </span><span class="lineCov">        134 :                                 printh(&quot;  %s:  %s\n&quot;, hp-&gt;name, hp-&gt;value);</span>
+<span class="lineNum">     306 </span><span class="lineCov">        134 :                                 http_header_size += strlen(hp-&gt;name) + 2 + strlen(hp-&gt;value) + 1; // + &quot;: &quot; + '\n'</span>
+<span class="lineNum">     307 </span>            :                         }
+<span class="lineNum">     308 </span><span class="lineCov">        134 :                         ptr += rv;</span>
+<span class="lineNum">     309 </span><span class="lineCov">        134 :                         cnt += rv;</span>
+<span class="lineNum">     310 </span>            :                 }
+<span class="lineNum">     311 </span><span class="lineCov">       1028 :                 else if (*ptr &amp; 0x40) {  // literal header</span>
+<span class="lineNum">     312 </span>            :                         unsigned index;
+<span class="lineNum">     313 </span><span class="lineCov">        645 :                         int rv = extract_number(ptr, 0x3f, &amp;index);</span>
+<span class="lineNum">     314 </span><span class="lineCov">        645 :                         HpackStatic *hp = hpack_static_get(index);</span>
+<span class="lineNum">     315 </span><span class="lineCov">        645 :                         ptr += rv;</span>
+<span class="lineNum">     316 </span><span class="lineCov">        645 :                         cnt += rv;</span>
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span><span class="lineCov">        645 :                         if (!hp) {</span>
+<span class="lineNum">     319 </span>            :                                 // read two strings
+<span class="lineNum">     320 </span><span class="lineCov">         86 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     321 </span><span class="lineCov">         86 :                                 printh(&quot;:&quot;);</span>
+<span class="lineNum">     322 </span><span class="lineCov">         86 :                                 http_header_size += 2;</span>
+<span class="lineNum">     323 </span><span class="lineCov">         86 :                                 ptr += rv;</span>
+<span class="lineNum">     324 </span><span class="lineCov">         86 :                                 cnt += rv;</span>
+<span class="lineNum">     325 </span><span class="lineCov">         86 :                                 rv = extract_string(ptr);</span>
+<span class="lineNum">     326 </span><span class="lineCov">         86 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     327 </span><span class="lineCov">         86 :                                 http_header_size++;</span>
+<span class="lineNum">     328 </span><span class="lineCov">         86 :                                 ptr += rv;</span>
+<span class="lineNum">     329 </span><span class="lineCov">         86 :                                 cnt += rv;</span>
+<span class="lineNum">     330 </span>            :                         }
+<span class="lineNum">     331 </span>            :                         else {
+<span class="lineNum">     332 </span><span class="lineCov">        559 :                                 printh(&quot;  %s: &quot;, hp-&gt;name);</span>
+<span class="lineNum">     333 </span><span class="lineCov">        559 :                                 http_header_size += strlen(hp-&gt;name) + 2;</span>
+<span class="lineNum">     334 </span><span class="lineCov">        559 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     335 </span><span class="lineCov">        559 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     336 </span><span class="lineCov">        559 :                                 http_header_size++;</span>
+<span class="lineNum">     337 </span><span class="lineCov">        559 :                                 ptr += rv;</span>
+<span class="lineNum">     338 </span><span class="lineCov">        559 :                                 cnt += rv;</span>
+<span class="lineNum">     339 </span>            :                         }
+<span class="lineNum">     340 </span>            :                 }
+<span class="lineNum">     341 </span><span class="lineCov">        383 :                 else if (*ptr &amp; 0x20) { // dynamic table size update</span>
+<span class="lineNum">     342 </span>            :                         unsigned value;
+<span class="lineNum">     343 </span><span class="lineCov">         88 :                         int rv = extract_number(ptr, 0x1f, &amp;value);</span>
+<span class="lineNum">     344 </span><span class="lineCov">         88 :                         printh(&quot;  (HPACK dynamic table size: %u)\n&quot;, value);</span>
+<span class="lineNum">     345 </span><span class="lineCov">         88 :                         ptr += rv;</span>
+<span class="lineNum">     346 </span><span class="lineCov">         88 :                         cnt += rv;</span>
+<span class="lineNum">     347 </span>            :                 }
+<span class="lineNum">     348 </span><span class="lineCov">        295 :                 else if (*ptr &amp; 0x10) { // literal header field never indexed</span>
+<span class="lineNum">     349 </span>            :                         unsigned index;
+<span class="lineNum">     350 </span><span class="lineNoCov">          0 :                         int rv = extract_number(ptr, 0x0f, &amp;index);</span>
+<span class="lineNum">     351 </span><span class="lineNoCov">          0 :                         HpackStatic *hp = hpack_static_get(index);</span>
+<span class="lineNum">     352 </span><span class="lineNoCov">          0 :                         ptr += rv;</span>
+<span class="lineNum">     353 </span><span class="lineNoCov">          0 :                         cnt += rv;</span>
+<span class="lineNum">     354 </span>            : 
+<span class="lineNum">     355 </span><span class="lineNoCov">          0 :                         if (!hp) {</span>
+<span class="lineNum">     356 </span>            :                                 // read two strings
+<span class="lineNum">     357 </span><span class="lineNoCov">          0 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     358 </span><span class="lineNoCov">          0 :                                 printh(&quot;:&quot;);</span>
+<span class="lineNum">     359 </span><span class="lineNoCov">          0 :                                 http_header_size += 2;</span>
+<span class="lineNum">     360 </span><span class="lineNoCov">          0 :                                 ptr += rv;</span>
+<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                                 cnt += rv;</span>
+<span class="lineNum">     362 </span><span class="lineNoCov">          0 :                                 rv = extract_string(ptr);</span>
+<span class="lineNum">     363 </span><span class="lineNoCov">          0 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     364 </span><span class="lineNoCov">          0 :                                 http_header_size++;</span>
+<span class="lineNum">     365 </span><span class="lineNoCov">          0 :                                 ptr += rv;</span>
+<span class="lineNum">     366 </span><span class="lineNoCov">          0 :                                 cnt += rv;</span>
+<span class="lineNum">     367 </span>            :                         }
+<span class="lineNum">     368 </span>            :                         else {
+<span class="lineNum">     369 </span><span class="lineNoCov">          0 :                                 printh(&quot;  %s: &quot;, hp-&gt;name);</span>
+<span class="lineNum">     370 </span><span class="lineNoCov">          0 :                                 http_header_size += strlen(hp-&gt;name) + 2;</span>
+<span class="lineNum">     371 </span>            : 
+<span class="lineNum">     372 </span><span class="lineNoCov">          0 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     373 </span><span class="lineNoCov">          0 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     374 </span><span class="lineNoCov">          0 :                                 http_header_size++;</span>
+<span class="lineNum">     375 </span><span class="lineNoCov">          0 :                                 ptr += rv;</span>
+<span class="lineNum">     376 </span><span class="lineNoCov">          0 :                                 cnt += rv;</span>
+<span class="lineNum">     377 </span>            :                         }
+<span class="lineNum">     378 </span>            :                 }
+<span class="lineNum">     379 </span><span class="lineCov">        295 :                 else if ((*ptr &amp; 0xf0) == 0) { // literal header field without indexing</span>
+<span class="lineNum">     380 </span>            :                         unsigned index;
+<span class="lineNum">     381 </span><span class="lineCov">        295 :                         int rv = extract_number(ptr, 0x0f, &amp;index);</span>
+<span class="lineNum">     382 </span><span class="lineCov">        295 :                         HpackStatic *hp = hpack_static_get(index);</span>
+<span class="lineNum">     383 </span><span class="lineCov">        295 :                         ptr += rv;</span>
+<span class="lineNum">     384 </span><span class="lineCov">        295 :                         cnt += rv;</span>
+<span class="lineNum">     385 </span>            : 
+<span class="lineNum">     386 </span><span class="lineCov">        295 :                         if (!hp) {</span>
+<span class="lineNum">     387 </span>            :                                 // read two strings
+<span class="lineNum">     388 </span><span class="lineCov">        262 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     389 </span><span class="lineCov">        262 :                                 printh(&quot;:&quot;);</span>
+<span class="lineNum">     390 </span><span class="lineCov">        262 :                                 http_header_size += 2;</span>
+<span class="lineNum">     391 </span><span class="lineCov">        262 :                                 ptr += rv;</span>
+<span class="lineNum">     392 </span><span class="lineCov">        262 :                                 cnt += rv;</span>
+<span class="lineNum">     393 </span><span class="lineCov">        262 :                                 rv = extract_string(ptr);</span>
+<span class="lineNum">     394 </span><span class="lineCov">        262 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     395 </span><span class="lineCov">        262 :                                 http_header_size++;</span>
+<span class="lineNum">     396 </span><span class="lineCov">        262 :                                 ptr += rv;</span>
+<span class="lineNum">     397 </span><span class="lineCov">        262 :                                 cnt += rv;</span>
+<span class="lineNum">     398 </span>            :                         }
+<span class="lineNum">     399 </span>            :                         else {
+<span class="lineNum">     400 </span><span class="lineCov">         33 :                                 printh(&quot;  %s:&quot;, hp-&gt;name);</span>
+<span class="lineNum">     401 </span><span class="lineCov">         33 :                                 http_header_size += strlen(hp-&gt;name) + 2;</span>
+<span class="lineNum">     402 </span>            : 
+<span class="lineNum">     403 </span><span class="lineCov">         33 :                                 uint8_t rv = extract_string(ptr);</span>
+<span class="lineNum">     404 </span><span class="lineCov">         33 :                                 printh(&quot;\n&quot;);</span>
+<span class="lineNum">     405 </span><span class="lineCov">         33 :                                 http_header_size++;</span>
+<span class="lineNum">     406 </span><span class="lineCov">         33 :                                 ptr += rv;</span>
+<span class="lineNum">     407 </span><span class="lineCov">         33 :                                 cnt += rv;</span>
+<span class="lineNum">     408 </span>            :                         }
+<span class="lineNum">     409 </span>            :                 }
+<span class="lineNum">     410 </span>            :                 else {
+<span class="lineNum">     411 </span><span class="lineNoCov">          0 :                         printh(&quot;unknown field 0x%02x, position %u\n&quot;, *ptr, cnt);</span>
+<span class="lineNum">     412 </span><span class="lineNoCov">          0 :                         ptr++;</span>
+<span class="lineNum">     413 </span><span class="lineNoCov">          0 :                         cnt++;</span>
+<span class="lineNum">     414 </span>            :                 }
+<span class="lineNum">     415 </span>            : //printf(&quot;http_header_size %d\n&quot;, http_header_size);
+<span class="lineNum">     416 </span>            :         }
+<span class="lineNum">     417 </span><span class="lineCov">        134 :         printh(&quot;-----------------------------\n&quot;);</span>
+<span class="lineNum">     418 </span>            : }
+<span class="lineNum">     419 </span>            : 
+<span class="lineNum">     420 </span>            : 
+<span class="lineNum">     421 </span>            : // encode a data frame
+<span class="lineNum">     422 </span>            : // frame - http2 frame
+<span class="lineNum">     423 </span>            : // data and length
+<a name="424"><span class="lineNum">     424 </span>            : // using the same session id as the last encoded header frame; ending the stream</a>
+<span class="lineNum">     425 </span>            : // return offset for the end of the frame
+<span class="lineNum">     426 </span><span class="lineCov">        422 : static uint32_t h2_encode_data(uint8_t *frame, uint8_t *data, unsigned length) {</span>
+<span class="lineNum">     427 </span><span class="lineCov">        422 :         assert(frame);</span>
+<span class="lineNum">     428 </span><span class="lineCov">        422 :         assert(data);</span>
+<span class="lineNum">     429 </span><span class="lineCov">        422 :         assert(length);</span>
+<span class="lineNum">     430 </span>            : 
+<span class="lineNum">     431 </span>            :         // build header
+<span class="lineNum">     432 </span><span class="lineCov">        422 :         H2Frame *frm = (H2Frame *) frame;</span>
+<span class="lineNum">     433 </span><span class="lineCov">        422 :         h2frame_set_length(frm, length);</span>
+<span class="lineNum">     434 </span><span class="lineCov">        422 :         frm-&gt;type = H2_TYPE_DATA;</span>
+<span class="lineNum">     435 </span><span class="lineCov">        422 :         frm-&gt;flag = H2_FLAG_END_STREAM;</span>
+<span class="lineNum">     436 </span><span class="lineCov">        422 :         h2frame_set_stream(frm, stream_id);</span>
+<span class="lineNum">     437 </span><span class="lineCov">        422 :         memcpy(frame + sizeof(H2Frame), data, length);</span>
+<span class="lineNum">     438 </span>            : 
+<span class="lineNum">     439 </span><span class="lineCov">        422 :         return length + sizeof(H2Frame);</span>
+<span class="lineNum">     440 </span>            : }
+<span class="lineNum">     441 </span>            : 
+<span class="lineNum">     442 </span>            : // decode a data frame
+<span class="lineNum">     443 </span>            : // frame - http2 frame
+<span class="lineNum">     444 </span>            : // offset - offset to data section in frame
+<a name="445"><span class="lineNum">     445 </span>            : // length - length of data section</a>
+<span class="lineNum">     446 </span>            : // return offset for the end of the frame
+<span class="lineNum">     447 </span><span class="lineCov">        524 : static uint32_t h2_decode_data(uint8_t *frame, uint32_t *offset, uint32_t *length) {</span>
+<span class="lineNum">     448 </span><span class="lineCov">        524 :         assert(frame);</span>
+<span class="lineNum">     449 </span><span class="lineCov">        524 :         assert(length);</span>
+<span class="lineNum">     450 </span><span class="lineCov">        524 :         *offset = 0;</span>
+<span class="lineNum">     451 </span><span class="lineCov">        524 :         *length = 0;</span>
+<span class="lineNum">     452 </span>            : 
+<span class="lineNum">     453 </span>            :         // decode header
+<span class="lineNum">     454 </span>            :         // http2 frame
+<span class="lineNum">     455 </span>            :         H2Frame frm;
+<span class="lineNum">     456 </span><span class="lineCov">        524 :         memcpy(&amp;frm, frame, sizeof(H2Frame));</span>
+<span class="lineNum">     457 </span><span class="lineCov">        524 :         int rv = sizeof(H2Frame);</span>
+<span class="lineNum">     458 </span><span class="lineCov">        524 :         if (frm.type != H2_TYPE_DATA) {</span>
+<span class="lineNum">     459 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Not a data frame\n&quot;);</span>
+<span class="lineNum">     460 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     461 </span>            :         }
+<span class="lineNum">     462 </span>            : 
+<span class="lineNum">     463 </span><span class="lineCov">        524 :         uint8_t flg = frm.flag;</span>
+<span class="lineNum">     464 </span><span class="lineCov">        524 :         uint8_t pad = 0;</span>
+<span class="lineNum">     465 </span>            : //      uint32_t stream = h2frame_extract_stream(&amp;frm);
+<span class="lineNum">     466 </span>            : //todo:  check the current streamid
+<span class="lineNum">     467 </span><span class="lineCov">        524 :         *length = h2frame_extract_length(&amp;frm);</span>
+<span class="lineNum">     468 </span><span class="lineCov">        524 :         *offset = rv;</span>
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span><span class="lineCov">        524 :         if (flg &amp; H2_FLAG_PADDED)</span>
+<span class="lineNum">     471 </span><span class="lineNoCov">          0 :                 rv += 1;</span>
+<span class="lineNum">     472 </span>            : 
+<span class="lineNum">     473 </span><span class="lineCov">        524 :         *offset = rv;</span>
+<span class="lineNum">     474 </span><span class="lineCov">        524 :         return rv + *length + pad;</span>
+<span class="lineNum">     475 </span>            : }
+<span class="lineNum">     476 </span>            : 
+<span class="lineNum">     477 </span>            : 
+<a name="478"><span class="lineNum">     478 </span>            : static uint8_t buf_query[MAXBUF];</a>
+<span class="lineNum">     479 </span>            : // returns -1 if error
+<span class="lineNum">     480 </span><span class="lineCov">        134 : static int h2_connect(void) {</span>
+<span class="lineNum">     481 </span><span class="lineCov">        134 :         stream_id = 0;</span>
+<span class="lineNum">     482 </span><span class="lineCov">        134 :         uint8_t connect[] = {</span>
+<span class="lineNum">     483 </span>            :                 0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
+<span class="lineNum">     484 </span>            :                 0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x00, 0x12, 0x04, 0x00, 0x00, 0x00, 0x00,
+<span class="lineNum">     485 </span>            :                 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00,
+<span class="lineNum">     486 </span>            :                 0x00, 0x40, 0x00, 0x00, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbf, 0x00, 0x01,
+<span class="lineNum">     487 </span>            :                 0x00, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0xc8, 0x00, 0x00,
+<span class="lineNum">     488 </span>            :                 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x05, 0x02,
+<span class="lineNum">     489 </span>            :                 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x02, 0x00, 0x00,
+<span class="lineNum">     490 </span>            :                 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00,
+<span class="lineNum">     491 </span>            :                 0x0b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00,
+<span class="lineNum">     492 </span>            :                 0x00, 0x00, 0x00, 0xf0
+<span class="lineNum">     493 </span>            :         };
+<span class="lineNum">     494 </span>            : 
+<span class="lineNum">     495 </span><span class="lineCov">        134 :         if (arg_debug || arg_debug_transport) {</span>
+<span class="lineNum">     496 </span><span class="lineCov">          7 :                 print_time();</span>
+<span class="lineNum">     497 </span><span class="lineCov">          7 :                 printf(&quot;(%d) h2 tx connect\n&quot;, arg_id);</span>
+<span class="lineNum">     498 </span>            :         }
+<span class="lineNum">     499 </span>            : 
+<span class="lineNum">     500 </span><span class="lineCov">        134 :         ssl_tx(connect, sizeof(connect));</span>
+<span class="lineNum">     501 </span><span class="lineCov">        134 :         int rv = h2_exchange(buf_query, stream_id);</span>
+<span class="lineNum">     502 </span><span class="lineCov">        134 :         stream_id = 13;</span>
+<span class="lineNum">     503 </span><span class="lineCov">        134 :         return rv;</span>
+<span class="lineNum">     504 </span>            : }
+<span class="lineNum">     505 </span>            : 
+<a name="506"><span class="lineNum">     506 </span>            : // the result message is placed in res, the length of the message is returned</a>
+<span class="lineNum">     507 </span>            : // returns -1 if error
+<span class="lineNum">     508 </span><span class="lineCov">        404 : static int h2_send_exampledotcom(uint8_t *req) {</span>
+<span class="lineNum">     509 </span><span class="lineCov">        404 :         stream_id += 2;</span>
+<span class="lineNum">     510 </span>            : 
+<span class="lineNum">     511 </span>            : #if 0
+<span class="lineNum">     512 </span>            :         uint8_t dnsmsg[] = {
+<span class="lineNum">     513 </span>            :                 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00,
+<span class="lineNum">     514 </span>            :                 0x00, 0x00, 0x00, 0x00, 0x01, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x03, 0x63, 0x6f,
+<span class="lineNum">     515 </span>            :                 0x6d, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x29, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+<span class="lineNum">     516 </span>            :                 0x08, 0x00, 0x08, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00
+<span class="lineNum">     517 </span>            : //              , 0x00, 0x00, 0x29 (OPT record), 0x10, 0x00 (UDP payload), 0x00 (Higher bits), 0x00 (EDNS version),
+<span class="lineNum">     518 </span>            : //               0x00, 0x00 (Z), 0x00, 0x08 (length),
+<span class="lineNum">     519 </span>            : //                                      0x00, 0x08 (code), 0x00, 0x04 (length), 0x00, 0x01 (family), 0x00 (source prefix-len), 0x00 (scope prefix-len)
+<span class="lineNum">     520 </span>            :         };
+<span class="lineNum">     521 </span>            : #endif
+<span class="lineNum">     522 </span><span class="lineCov">        404 :         uint8_t dnsmsg[] = {</span>
+<span class="lineNum">     523 </span>            :                 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00,
+<span class="lineNum">     524 </span>            :                 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x03, 0x63, 0x6f,
+<span class="lineNum">     525 </span>            :                 0x6d, 0x00, 0x00, 0x02, 0x00, 0x01
+<span class="lineNum">     526 </span>            :         };
+<span class="lineNum">     527 </span>            : 
+<span class="lineNum">     528 </span><span class="lineCov">        404 :         uint32_t len = h2_encode_header(buf_query, sizeof(dnsmsg));</span>
+<span class="lineNum">     529 </span><span class="lineCov">        404 :         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     530 </span><span class="lineCov">         25 :                 h2frame_print(arg_id, &quot;tx&quot;, (H2Frame *) buf_query);</span>
+<span class="lineNum">     531 </span>            : 
+<span class="lineNum">     532 </span><span class="lineCov">        404 :         int len2 = h2_encode_data(buf_query + len, dnsmsg, sizeof(dnsmsg));</span>
+<span class="lineNum">     533 </span><span class="lineCov">        404 :         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     534 </span><span class="lineCov">         25 :                 h2frame_print(arg_id, &quot;tx&quot;, (H2Frame *) (buf_query + len));</span>
+<span class="lineNum">     535 </span>            : 
+<span class="lineNum">     536 </span><span class="lineCov">        404 :         ssl_tx(buf_query, len + len2);</span>
+<span class="lineNum">     537 </span>            : 
+<span class="lineNum">     538 </span><span class="lineCov">        404 :         if (arg_details &amp;&amp; first_query &amp;&amp; first_header_sent)</span>
+<span class="lineNum">     539 </span><span class="lineCov">          1 :                 printf(&quot;\n   HTTP Header:\n&quot;);</span>
+<span class="lineNum">     540 </span><span class="lineCov">        404 :         printn(&quot;\n   Network Trace:&quot;);</span>
+<span class="lineNum">     541 </span><span class="lineCov">        404 :         int rv = h2_exchange(req, stream_id);</span>
+<span class="lineNum">     542 </span><span class="lineCov">        404 :         second_query = (first_query)? 1: 0;</span>
+<span class="lineNum">     543 </span><span class="lineCov">        404 :         first_query = 0;</span>
+<span class="lineNum">     544 </span><span class="lineCov">        404 :         return rv;</span>
+<span class="lineNum">     545 </span>            : }
+<span class="lineNum">     546 </span>            : 
+<span class="lineNum">     547 </span>            : 
+<a name="548"><span class="lineNum">     548 </span>            : // the result message is placed in req, the length of the message is returned</a>
+<span class="lineNum">     549 </span>            : // returns -1 if error
+<span class="lineNum">     550 </span><span class="lineCov">         18 : static int h2_send_query(uint8_t *req, int cnt) {</span>
+<span class="lineNum">     551 </span><span class="lineCov">         18 :         if (cnt &lt;= 0 || cnt &gt; DNS_MAX_DOMAIN_NAME)</span>
+<span class="lineNum">     552 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     553 </span>            : 
+<span class="lineNum">     554 </span><span class="lineCov">         18 :         stream_id += 2;</span>
+<span class="lineNum">     555 </span><span class="lineCov">         18 :         uint32_t len = h2_encode_header(buf_query, cnt);</span>
+<span class="lineNum">     556 </span><span class="lineCov">         18 :         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     557 </span><span class="lineCov">          2 :                 h2frame_print(arg_id, &quot;tx&quot;, (H2Frame *) buf_query);</span>
+<span class="lineNum">     558 </span>            : 
+<span class="lineNum">     559 </span><span class="lineCov">         18 :         int len2 = h2_encode_data(buf_query + len, req, cnt);</span>
+<span class="lineNum">     560 </span><span class="lineCov">         18 :         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     561 </span><span class="lineCov">          2 :                 h2frame_print(arg_id, &quot;tx&quot;, (H2Frame *) (buf_query + len));</span>
+<span class="lineNum">     562 </span><span class="lineCov">         18 :         ssl_tx(buf_query, len + len2);</span>
+<span class="lineNum">     563 </span>            : 
+<span class="lineNum">     564 </span><span class="lineCov">         18 :         return h2_exchange(req, stream_id);</span>
+<span class="lineNum">     565 </span>            : }
+<a name="566"><span class="lineNum">     566 </span>            : </a>
+<span class="lineNum">     567 </span>            : // returns -1 if error
+<span class="lineNum">     568 </span><span class="lineCov">         10 : static int h2_send_ping(void) {</span>
+<span class="lineNum">     569 </span><span class="lineCov">         10 :         uint8_t frame[] = {0, 0, 8, 6,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };</span>
+<span class="lineNum">     570 </span><span class="lineCov">         10 :         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     571 </span><span class="lineNoCov">          0 :                 h2frame_print(arg_id, &quot;tx&quot;, (H2Frame *) frame);</span>
+<span class="lineNum">     572 </span>            : 
+<span class="lineNum">     573 </span><span class="lineCov">         10 :         ssl_tx(frame, sizeof(frame));</span>
+<span class="lineNum">     574 </span><span class="lineCov">         10 :         return h2_exchange(buf_query, 0);</span>
+<span class="lineNum">     575 </span>            : }
+<span class="lineNum">     576 </span>            : 
+<span class="lineNum">     577 </span>            : 
+<a name="578"><span class="lineNum">     578 </span>            : // copy rx data in response and return the length</a>
+<span class="lineNum">     579 </span>            : // return -1 if error
+<span class="lineNum">     580 </span><span class="lineCov">        570 : static int h2_exchange(uint8_t *response, uint32_t stream) {</span>
+<span class="lineNum">     581 </span><span class="lineCov">        570 :         assert(response);</span>
+<span class="lineNum">     582 </span><span class="lineCov">        570 :         int retval = 0;</span>
+<span class="lineNum">     583 </span>            : 
+<span class="lineNum">     584 </span>            :         uint8_t buf[MAXBUF];
+<span class="lineNum">     585 </span><span class="lineCov">        518 :         while (1) {</span>
+<span class="lineNum">     586 </span>            :                 fd_set readfds;
+<span class="lineNum">     587 </span><span class="lineCov">       1088 :                 FD_ZERO(&amp;readfds);</span>
+<span class="lineNum">     588 </span><span class="lineCov">       1088 :                 int fd = ssl_get_socket();</span>
+<span class="lineNum">     589 </span><span class="lineCov">       1088 :                 FD_SET(fd, &amp;readfds);</span>
+<span class="lineNum">     590 </span>            :                 struct timeval timeout;
+<span class="lineNum">     591 </span><span class="lineCov">       1088 :                 timeout.tv_sec = H2_TIMEOUT;</span>
+<span class="lineNum">     592 </span><span class="lineCov">       1088 :                 timeout.tv_usec = 0;</span>
+<span class="lineNum">     593 </span>            : 
+<span class="lineNum">     594 </span><span class="lineCov">       1088 :                 int rv = select(fd + 1, &amp;readfds, NULL, NULL, &amp;timeout);</span>
+<span class="lineNum">     595 </span><span class="lineCov">       1088 :                 if (rv &lt; 0)</span>
+<span class="lineNum">     596 </span><span class="lineCov">        570 :                         return -1;</span>
+<span class="lineNum">     597 </span><span class="lineCov">       1088 :                 if (rv == 0) {</span>
+<span class="lineNum">     598 </span><span class="lineNoCov">          0 :                         if (arg_id &gt; 0)</span>
+<span class="lineNum">     599 </span><span class="lineNoCov">          0 :                                 rlogprintf(&quot;Error: h2 timeout\n&quot;);</span>
+<span class="lineNum">     600 </span>            :                         else
+<span class="lineNum">     601 </span><span class="lineNoCov">          0 :                                 fprintf(stderr, &quot;Error: h2 timeout\n&quot;);</span>
+<span class="lineNum">     602 </span><span class="lineNoCov">          0 :                         if (ssl_state == SSL_OPEN)</span>
+<span class="lineNum">     603 </span><span class="lineNoCov">          0 :                                 ssl_close();</span>
+<span class="lineNum">     604 </span><span class="lineNoCov">          0 :                         return -1;</span>
+<span class="lineNum">     605 </span>            :                 }
+<span class="lineNum">     606 </span>            : 
+<span class="lineNum">     607 </span><span class="lineCov">       1088 :                 if (FD_ISSET(fd, &amp;readfds)) {</span>
+<span class="lineNum">     608 </span><span class="lineCov">       1088 :                         int rv = ssl_rx(buf, MAXBUF);</span>
+<span class="lineNum">     609 </span><span class="lineCov">       1088 :                         if (rv == 0) {</span>
+<span class="lineNum">     610 </span><span class="lineNoCov">          0 :                                 if (ssl_state == SSL_OPEN)</span>
+<span class="lineNum">     611 </span><span class="lineNoCov">          0 :                                         ssl_close();</span>
+<span class="lineNum">     612 </span><span class="lineNoCov">          0 :                                 return 0;</span>
+<span class="lineNum">     613 </span>            :                         }
+<span class="lineNum">     614 </span>            :                         // todo: handle an incomplete frame
+<span class="lineNum">     615 </span>            : 
+<span class="lineNum">     616 </span>            : 
+<span class="lineNum">     617 </span><span class="lineCov">       1088 :                         if (arg_debug) {</span>
+<span class="lineNum">     618 </span><span class="lineCov">         50 :                                 print_time();</span>
+<span class="lineNum">     619 </span><span class="lineCov">         50 :                                 printf(&quot;(%d) h2 rx packet %d bytes\n&quot;, arg_id, rv);</span>
+<span class="lineNum">     620 </span><span class="lineCov">         50 :                                 print_mem(buf, rv);</span>
+<span class="lineNum">     621 </span>            :                         }
+<span class="lineNum">     622 </span>            : 
+<span class="lineNum">     623 </span><span class="lineCov">       1088 :                         if (first_header_sent)</span>
+<span class="lineNum">     624 </span><span class="lineCov">        847 :                                 h2_rx += 20 + 20 + 5 + (int) ((float) rv * 1.2); // ip + tcp + tls + h2</span>
+<span class="lineNum">     625 </span><span class="lineCov">       1088 :                         printn(&quot;\n-----&gt; rx %d bytes: IP + TCP + TLS &quot;, 20 + 20 + 5 + (int) ((float) rv * 1.2));</span>
+<span class="lineNum">     626 </span>            : 
+<span class="lineNum">     627 </span><span class="lineCov">       1088 :                         int offset = 0;</span>
+<span class="lineNum">     628 </span><span class="lineCov">       2036 :                         while (offset &lt; rv) {</span>
+<span class="lineNum">     629 </span><span class="lineCov">       1518 :                                 H2Frame *frm = (H2Frame *) (buf + offset);</span>
+<span class="lineNum">     630 </span>            : 
+<span class="lineNum">     631 </span><span class="lineCov">       1518 :                                 if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     632 </span><span class="lineCov">         83 :                                         h2frame_print(arg_id, &quot;rx&quot;, frm);</span>
+<span class="lineNum">     633 </span>            : 
+<span class="lineNum">     634 </span>            :                                 // go away conditions
+<span class="lineNum">     635 </span><span class="lineCov">       1518 :                                 if (frm-&gt;type == H2_TYPE_GOAWAY) {</span>
+<span class="lineNum">     636 </span><span class="lineNoCov">          0 :                                         ssl_close();</span>
+<span class="lineNum">     637 </span><span class="lineNoCov">          0 :                                         return 0;</span>
+<span class="lineNum">     638 </span>            :                                 }
+<span class="lineNum">     639 </span>            :                                 // reset strean - something is very wrong!
+<span class="lineNum">     640 </span><span class="lineCov">       1518 :                                 if (frm-&gt;type == H2_TYPE_RESET) {</span>
+<span class="lineNum">     641 </span><span class="lineNoCov">          0 :                                         ssl_close();</span>
+<span class="lineNum">     642 </span><span class="lineNoCov">          0 :                                         return 0;</span>
+<span class="lineNum">     643 </span>            :                                 }
+<span class="lineNum">     644 </span><span class="lineCov">       1518 :                                 else if (frm-&gt;type &gt; H2_TYPE_MAX &amp;&amp; strncmp((char *) frm, &quot;HTTP&quot;, 4) == 0) {</span>
+<span class="lineNum">     645 </span><span class="lineNoCov">          0 :                                         fprintf(stderr, &quot;Error: invalid HTTP version\n&quot;);</span>
+<span class="lineNum">     646 </span><span class="lineNoCov">          0 :                                         return -1;</span>
+<span class="lineNum">     647 </span>            :                                 }
+<span class="lineNum">     648 </span>            : 
+<span class="lineNum">     649 </span>            :                                 // normal header type processing
+<span class="lineNum">     650 </span><span class="lineCov">       1518 :                                 if (frm-&gt;type == H2_TYPE_WIN_UPDATE) {</span>
+<span class="lineNum">     651 </span><span class="lineCov">        305 :                                         printn(&quot;+ H2-WINDOW-UPDATE &quot;);</span>
+<span class="lineNum">     652 </span>            :                                 }
+<span class="lineNum">     653 </span><span class="lineCov">       1213 :                                 else if (frm-&gt;type == H2_TYPE_HEADERS) {</span>
+<span class="lineNum">     654 </span><span class="lineCov">        422 :                                         printn(&quot;+ H2-HEADERS &quot;);</span>
+<span class="lineNum">     655 </span>            : 
+<span class="lineNum">     656 </span><span class="lineCov">        422 :                                         size_t len = h2frame_extract_length(frm);</span>
+<span class="lineNum">     657 </span><span class="lineCov">        422 :                                         if (first_query) { // print header, don't include it in the average</span>
+<span class="lineNum">     658 </span><span class="lineCov">        134 :                                                 h2_decode_header((uint8_t *) frm);</span>
+<span class="lineNum">     659 </span>            :                                         }
+<span class="lineNum">     660 </span>            :                                         else {
+<span class="lineNum">     661 </span><span class="lineCov">        288 :                                                 h2_header_total_len += len;</span>
+<span class="lineNum">     662 </span><span class="lineCov">        288 :                                                 h2_header_cnt++;</span>
+<span class="lineNum">     663 </span>            :                                         }
+<span class="lineNum">     664 </span>            :                                 }
+<span class="lineNum">     665 </span><span class="lineCov">        791 :                                 else if (frm-&gt;type == H2_TYPE_DATA) {</span>
+<span class="lineNum">     666 </span><span class="lineCov">        524 :                                         printn(&quot;+ H2-DATA &quot;);</span>
+<span class="lineNum">     667 </span>            : 
+<span class="lineNum">     668 </span>            :                                         uint32_t offset;
+<span class="lineNum">     669 </span>            :                                         uint32_t length;
+<span class="lineNum">     670 </span><span class="lineCov">        524 :                                         h2_decode_data((uint8_t *) frm, &amp;offset, &amp;length);</span>
+<span class="lineNum">     671 </span><span class="lineCov">        524 :                                         if (arg_debug)</span>
+<span class="lineNum">     672 </span><span class="lineCov">         37 :                                                 print_mem((uint8_t *) frm + offset, length);</span>
+<span class="lineNum">     673 </span><span class="lineCov">        524 :                                         h2_rx_dns += 20 + 8 + length; // ip + udp + dns</span>
+<span class="lineNum">     674 </span>            : 
+<span class="lineNum">     675 </span>            :                                         // copy response in buf_query_data
+<span class="lineNum">     676 </span><span class="lineCov">        524 :                                         if (length != 0) {</span>
+<span class="lineNum">     677 </span><span class="lineCov">        422 :                                                 memcpy(response, (uint8_t *) frm + offset, length);</span>
+<span class="lineNum">     678 </span><span class="lineCov">        422 :                                                 retval = length;</span>
+<span class="lineNum">     679 </span>            :                                         }
+<span class="lineNum">     680 </span>            :                                 }
+<span class="lineNum">     681 </span>            :                                 // ping response - do nothing
+<span class="lineNum">     682 </span><span class="lineCov">        267 :                                 else if (frm-&gt;type == H2_TYPE_PING &amp;&amp; frm-&gt;flag &amp; H2_FLAG_END_STREAM)</span>
+<span class="lineNum">     683 </span><span class="lineCov">         10 :                                         return 0;</span>
+<span class="lineNum">     684 </span>            : 
+<span class="lineNum">     685 </span>            :                                 // ping request - set end stream flag and return the packet
+<span class="lineNum">     686 </span><span class="lineCov">        257 :                                 else if (frm-&gt;type == H2_TYPE_PING &amp;&amp; (frm-&gt;flag &amp; H2_FLAG_END_STREAM) == 0) {</span>
+<span class="lineNum">     687 </span><span class="lineCov">          4 :                                         printn(&quot;+ H2-PING &quot;);</span>
+<span class="lineNum">     688 </span><span class="lineCov">          4 :                                         frm-&gt;flag |= H2_FLAG_END_STREAM;</span>
+<span class="lineNum">     689 </span><span class="lineCov">          4 :                                         if (arg_debug || arg_debug_transport)</span>
+<span class="lineNum">     690 </span><span class="lineNoCov">          0 :                                                 h2frame_print(arg_id, &quot;tx&quot;, frm);</span>
+<span class="lineNum">     691 </span>            : 
+<span class="lineNum">     692 </span><span class="lineCov">          4 :                                         printn(&quot;\n&lt;----- tx %d bytes: IP + TCP + TLS + H2-PING  (end stream)&quot;, 20 + 20 + 5 + (int) ((float) rv * 1.2));</span>
+<span class="lineNum">     693 </span>            : 
+<span class="lineNum">     694 </span><span class="lineCov">          4 :                                         ssl_tx((uint8_t *) frm, rv - offset);</span>
+<span class="lineNum">     695 </span><span class="lineCov">          4 :                                         if (stream == 0)</span>
+<span class="lineNum">     696 </span><span class="lineCov">          4 :                                                 return 0;</span>
+<span class="lineNum">     697 </span>            : 
+<span class="lineNum">     698 </span><span class="lineNoCov">          0 :                                         frm-&gt;flag &amp;= ~H2_FLAG_END_STREAM;</span>
+<span class="lineNum">     699 </span>            :                                 }
+<span class="lineNum">     700 </span>            : 
+<span class="lineNum">     701 </span><span class="lineCov">       1504 :                                 if (frm-&gt;flag &amp; H2_FLAG_END_STREAM) {</span>
+<span class="lineNum">     702 </span><span class="lineCov">        556 :                                         if (arg_details &amp;&amp; second_query)</span>
+<span class="lineNum">     703 </span><span class="lineCov">          1 :                                                 printf(&quot;%s (end stream)\n\n&quot;, pktbuf);</span>
+<span class="lineNum">     704 </span><span class="lineCov">        556 :                                         return retval; // disregard the rest!</span>
+<span class="lineNum">     705 </span>            :                                 }
+<span class="lineNum">     706 </span>            : 
+<span class="lineNum">     707 </span><span class="lineCov">        948 :                                 offset += sizeof(H2Frame) + h2frame_extract_length(frm);</span>
+<span class="lineNum">     708 </span><span class="lineCov">        948 :                                 if (arg_debug) {</span>
+<span class="lineNum">     709 </span><span class="lineCov">         49 :                                         print_time();</span>
+<span class="lineNum">     710 </span><span class="lineCov">         49 :                                         printf(&quot;(%d) h2 rx data offset %d\n&quot;, arg_id, offset);</span>
+<span class="lineNum">     711 </span>            :                                 }
+<span class="lineNum">     712 </span>            :                         }
+<span class="lineNum">     713 </span>            :                 }
+<span class="lineNum">     714 </span>            :         }
+<span class="lineNum">     715 </span>            : 
+<span class="lineNum">     716 </span>            :         return retval;
+<span class="lineNum">     717 </span>            : }
+<span class="lineNum">     718 </span>            : 
+<span class="lineNum">     719 </span>            : 
+<span class="lineNum">     720 </span>            : 
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

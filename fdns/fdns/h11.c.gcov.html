@@ -1,0 +1,385 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/h11.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - h11.c<span style="font-size: 80%;"> (source / <a href="h11.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">76</td>
+            <td class="headerCovTableEntry">138</td>
+            <td class="headerCovTableEntryLo">55.1 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryLo">72.7 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : 
+<span class="lineNum">      20 </span>            : #define _GNU_SOURCE
+<span class="lineNum">      21 </span>            : #include &lt;stdint.h&gt;
+<span class="lineNum">      22 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      23 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      24 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      25 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      26 </span>            : #include &lt;assert.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;stddef.h&gt;
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      30 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;lint.h&quot;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : static void h11_header_stats(void);
+<span class="lineNum">      34 </span>            : static double h11_bandwidth(void);
+<span class="lineNum">      35 </span>            : static void h11_init(void);
+<span class="lineNum">      36 </span>            : static void h11_close(void);
+<span class="lineNum">      37 </span>            : static int h11_connect(void);
+<span class="lineNum">      38 </span>            : static int h11_send_exampledotcom(uint8_t *req);
+<span class="lineNum">      39 </span>            : static int h11_send_query(uint8_t *req, int cnt);
+<span class="lineNum">      40 </span>            : static int h11_send_ping(void);
+<span class="lineNum">      41 </span>            : static int h11_exchange(uint8_t *response, uint32_t stream);
+<span class="lineNum">      42 </span>            : static void h11_print_url(void);
+<span class="lineNum">      43 </span>            : DnsTransport h11_transport = {
+<span class="lineNum">      44 </span>            :         &quot;http/1.1&quot;,
+<span class="lineNum">      45 </span>            :         &quot;DoH&quot;,
+<span class="lineNum">      46 </span>            :         h11_init,
+<span class="lineNum">      47 </span>            :         h11_close,
+<span class="lineNum">      48 </span>            :         h11_connect,
+<span class="lineNum">      49 </span>            :         h11_send_exampledotcom,
+<span class="lineNum">      50 </span>            :         h11_send_query,
+<span class="lineNum">      51 </span>            :         h11_send_ping,
+<span class="lineNum">      52 </span>            :         h11_exchange,
+<span class="lineNum">      53 </span>            :         h11_header_stats,
+<span class="lineNum">      54 </span>            :         h11_bandwidth,
+<span class="lineNum">      55 </span>            :         h11_print_url
+<span class="lineNum">      56 </span>            : };
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span>            : 
+<span class="lineNum">      59 </span>            : static unsigned h11_header_total_len = 0;       // accumulated header length
+<span class="lineNum">      60 </span>            : static int h11_header_cnt = 0;          // counting number of headers frames
+<span class="lineNum">      61 </span>            : static int h11_rx = 0; // received bytes, including IP/TCP/TLS headers
+<span class="lineNum">      62 </span>            : static int h11_rx_dns = 0; // received DNS bytes over H2 plus IP/UDP
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            : static int first_query = 1;     // don't include the first query in network byte count
+<a name="66"><span class="lineNum">      66 </span>            : </a>
+<span class="lineNum">      67 </span>            : 
+<span class="lineNum">      68 </span><span class="lineNoCov">          0 : static void h11_print_url(void) {</span>
+<span class="lineNum">      69 </span><span class="lineNoCov">          0 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">      70 </span><span class="lineNoCov">          0 :         assert(srv);</span>
+<span class="lineNum">      71 </span><span class="lineNoCov">          0 :         printf(&quot;   URL: https://%s%s\n&quot;, srv-&gt;host, srv-&gt;path);</span>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span><span class="lineCov">          1 : static void h11_header_stats(void) {</span>
+<span class="lineNum">      75 </span><span class="lineCov">          1 :         if (h11_header_cnt == 0)</span>
+<span class="lineNum">      76 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">      77 </span><span class="lineCov">          1 :         printf(&quot;   Header size: %d bytes\n&quot;,</span>
+<span class="lineNum">      78 </span>            :                 h11_header_total_len / h11_header_cnt);
+<span class="lineNum">      79 </span>            : }
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<span class="lineNum">      81 </span>            : // Do53 / DoH ratio
+<span class="lineNum">      82 </span><span class="lineCov">          4 : static double h11_bandwidth(void) {</span>
+<span class="lineNum">      83 </span><span class="lineCov">          4 :         if (h11_rx_dns == 0)</span>
+<span class="lineNum">      84 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">      85 </span><span class="lineCov">          4 :         return (double) h11_rx / (double) h11_rx_dns;</span>
+<a name="86"><span class="lineNum">      86 </span>            : }</a>
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span><span class="lineCov">          8 : static void h11_init(void) {</span>
+<span class="lineNum">      89 </span>            : //      first_header_sent = 0;
+<span class="lineNum">      90 </span>            : //      first_query = 1;
+<span class="lineNum">      91 </span>            : //      second_query = 0;
+<a name="92"><span class="lineNum">      92 </span><span class="lineCov">          8 : }</span></a>
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span><span class="lineCov">          2 : static void h11_close(void) {</span>
+<span class="lineNum">      95 </span>            : //      first_header_sent = 0;
+<span class="lineNum">      96 </span>            : //      first_query = 1;
+<span class="lineNum">      97 </span>            : //      second_query = 0;
+<span class="lineNum">      98 </span><span class="lineCov">          2 : }</span>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span>            : 
+<span class="lineNum">     101 </span>            : 
+<a name="102"><span class="lineNum">     102 </span>            : static uint8_t buf_query[MAXBUF];</a>
+<span class="lineNum">     103 </span>            : // returns -1 if error
+<span class="lineNum">     104 </span><span class="lineCov">          8 : static int h11_connect(void) {</span>
+<span class="lineNum">     105 </span><span class="lineCov">          8 :         return 0;</span>
+<span class="lineNum">     106 </span>            : }
+<span class="lineNum">     107 </span>            : 
+<span class="lineNum">     108 </span>            : static char *push_request_tail =
+<span class="lineNum">     109 </span>            :         &quot;Accept: application/dns-message\r\n&quot; \
+<span class="lineNum">     110 </span>            :         &quot;Content-Type: application/dns-message\r\n&quot; \
+<span class="lineNum">     111 </span>            :         &quot;Content-Length: %d\r\n&quot; \
+<span class="lineNum">     112 </span>            :         &quot;\r\n&quot;;
+<span class="lineNum">     113 </span>            : 
+<a name="114"><span class="lineNum">     114 </span>            : // the result message is placed in res, the length of the message is returned</a>
+<span class="lineNum">     115 </span>            : // returns -1 if error
+<span class="lineNum">     116 </span><span class="lineCov">         32 : static int h11_send_exampledotcom(uint8_t *req) {</span>
+<span class="lineNum">     117 </span>            : #if 0
+<span class="lineNum">     118 </span>            :         uint8_t dnsmsg[] = {
+<span class="lineNum">     119 </span>            :                 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00,
+<span class="lineNum">     120 </span>            :                 0x00, 0x00, 0x00, 0x00, 0x01, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x03, 0x63, 0x6f,
+<span class="lineNum">     121 </span>            :                 0x6d, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x29, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+<span class="lineNum">     122 </span>            :                 0x08, 0x00, 0x08, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00
+<span class="lineNum">     123 </span>            : //              , 0x00, 0x00, 0x29 (OPT record), 0x10, 0x00 (UDP payload), 0x00 (Higher bits), 0x00 (EDNS version),
+<span class="lineNum">     124 </span>            : //               0x00, 0x00 (Z), 0x00, 0x08 (length),
+<span class="lineNum">     125 </span>            : //                                      0x00, 0x08 (code), 0x00, 0x04 (length), 0x00, 0x01 (family), 0x00 (source prefix-len), 0x00 (scope prefix-len)
+<span class="lineNum">     126 </span>            :         };
+<span class="lineNum">     127 </span>            : #endif
+<span class="lineNum">     128 </span><span class="lineCov">         32 :         uint8_t dnsmsg[] = {</span>
+<span class="lineNum">     129 </span>            :                 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00,
+<span class="lineNum">     130 </span>            :                 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x03, 0x63, 0x6f,
+<span class="lineNum">     131 </span>            :                 0x6d, 0x00, 0x00, 0x02, 0x00, 0x01
+<span class="lineNum">     132 </span>            :         };
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span><span class="lineCov">         32 :         DnsServer *s = server_get();</span>
+<span class="lineNum">     135 </span><span class="lineCov">         32 :         sprintf((char *) buf_query, &quot;POST %s HTTP/1.1\r\nHost: %s\r\n&quot;,  s-&gt;path, s-&gt;host);</span>
+<span class="lineNum">     136 </span><span class="lineCov">         32 :         uint8_t *ptr = buf_query + strlen((char *) buf_query);</span>
+<span class="lineNum">     137 </span><span class="lineCov">         32 :         sprintf((char *) ptr, push_request_tail, sizeof(dnsmsg));</span>
+<span class="lineNum">     138 </span><span class="lineCov">         32 :         ptr += strlen((char *) ptr);</span>
+<span class="lineNum">     139 </span><span class="lineCov">         32 :         memcpy(ptr, dnsmsg, sizeof(dnsmsg));</span>
+<span class="lineNum">     140 </span><span class="lineCov">         32 :         ptr += sizeof(dnsmsg);</span>
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span><span class="lineCov">         32 :         ptrdiff_t len = ptr - buf_query;</span>
+<span class="lineNum">     143 </span><span class="lineCov">         32 :         if (arg_debug || arg_debug_transport) {</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :                 print_time();</span>
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d) tx len %d http/1.1 POST\n&quot;, arg_id, (int) len);</span>
+<span class="lineNum">     146 </span>            :         }
+<span class="lineNum">     147 </span>            : 
+<span class="lineNum">     148 </span><span class="lineCov">         32 :         ssl_tx(buf_query, len);</span>
+<span class="lineNum">     149 </span>            : 
+<span class="lineNum">     150 </span><span class="lineCov">         32 :         int rv = h11_exchange(req, 0);</span>
+<span class="lineNum">     151 </span><span class="lineCov">         32 :         first_query = 0;</span>
+<span class="lineNum">     152 </span><span class="lineCov">         32 :         return rv;</span>
+<span class="lineNum">     153 </span>            : }
+<span class="lineNum">     154 </span>            : 
+<span class="lineNum">     155 </span>            : 
+<a name="156"><span class="lineNum">     156 </span>            : // the result message is placed in req, the length of the message is returned</a>
+<span class="lineNum">     157 </span>            : // returns -1 if error
+<span class="lineNum">     158 </span><span class="lineNoCov">          0 : static int h11_send_query(uint8_t *req, int cnt) {</span>
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :         if (cnt &lt;= 0 || cnt &gt; DNS_MAX_DOMAIN_NAME)</span>
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :                 return 0;</span>
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span><span class="lineNoCov">          0 :         DnsServer *s = server_get();</span>
+<span class="lineNum">     163 </span><span class="lineNoCov">          0 :         sprintf((char *) buf_query, &quot;POST %s HTTP/1.1\r\nHost: %s\r\n&quot;,  s-&gt;path, s-&gt;host);</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :         uint8_t *ptr = buf_query + strlen((char *) buf_query);</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :         sprintf((char *) ptr, push_request_tail, cnt);</span>
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :         ptr += strlen((char *) ptr);</span>
+<span class="lineNum">     167 </span><span class="lineNoCov">          0 :         memcpy(ptr, req, cnt);</span>
+<span class="lineNum">     168 </span><span class="lineNoCov">          0 :         ptr += cnt;</span>
+<span class="lineNum">     169 </span>            : 
+<span class="lineNum">     170 </span><span class="lineNoCov">          0 :         ptrdiff_t len = (uint8_t *) ptr - buf_query;</span>
+<span class="lineNum">     171 </span><span class="lineNoCov">          0 :         if (arg_debug || arg_debug_transport) {</span>
+<span class="lineNum">     172 </span><span class="lineNoCov">          0 :                 print_time();</span>
+<span class="lineNum">     173 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d) tx len %d http/1.1 POST\n&quot;, arg_id, (int) len);</span>
+<span class="lineNum">     174 </span>            :         }
+<span class="lineNum">     175 </span>            : 
+<span class="lineNum">     176 </span><span class="lineNoCov">          0 :         ssl_tx(buf_query, len);</span>
+<span class="lineNum">     177 </span>            : 
+<span class="lineNum">     178 </span><span class="lineNoCov">          0 :         int rv = h11_exchange(req, 0);</span>
+<span class="lineNum">     179 </span><span class="lineNoCov">          0 :         first_query = 0;</span>
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :         return rv;</span>
+<span class="lineNum">     181 </span>            : }
+<a name="182"><span class="lineNum">     182 </span>            : </a>
+<span class="lineNum">     183 </span>            : // returns -1 if error
+<span class="lineNum">     184 </span><span class="lineNoCov">          0 : static int h11_send_ping(void) {</span>
+<span class="lineNum">     185 </span><span class="lineNoCov">          0 :         return h11_send_exampledotcom(buf_query);</span>
+<a name="186"><span class="lineNum">     186 </span>            : }</a>
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">          1 : static void print_header(const char *str) {</span>
+<span class="lineNum">     189 </span><span class="lineCov">          1 :         char *buf = strdup(str);</span>
+<span class="lineNum">     190 </span><span class="lineCov">          1 :         if (!buf)</span>
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :                 errExit(&quot;strdup&quot;);</span>
+<span class="lineNum">     192 </span><span class="lineCov">          1 :         printf(&quot;\n   HTTP Header\n&quot;);</span>
+<span class="lineNum">     193 </span><span class="lineCov">          1 :         printf(&quot;-----------------------------\n&quot;);</span>
+<span class="lineNum">     194 </span><span class="lineCov">          1 :         char *ptr = strtok(buf, &quot;\n&quot;);</span>
+<span class="lineNum">     195 </span><span class="lineCov">         11 :         while (ptr) {</span>
+<span class="lineNum">     196 </span><span class="lineCov">         10 :                 printf(&quot;|  %s\n&quot;, ptr);</span>
+<span class="lineNum">     197 </span><span class="lineCov">         10 :                 ptr = strtok(NULL, &quot;\n&quot;);</span>
+<span class="lineNum">     198 </span>            :         }
+<span class="lineNum">     199 </span><span class="lineCov">          1 :         printf(&quot;-----------------------------\n&quot;);</span>
+<span class="lineNum">     200 </span><span class="lineCov">          1 :         free(buf);</span>
+<span class="lineNum">     201 </span><span class="lineCov">          1 : }</span>
+<span class="lineNum">     202 </span>            : 
+<a name="203"><span class="lineNum">     203 </span>            : // copy rx data in response and return the length</a>
+<span class="lineNum">     204 </span>            : // return -1 if error
+<span class="lineNum">     205 </span><span class="lineCov">         32 : static int h11_exchange(uint8_t *response, uint32_t stream) {</span>
+<span class="lineNum">     206 </span><span class="lineCov">         32 :         assert(response);</span>
+<span class="lineNum">     207 </span>            :         (void) stream;
+<span class="lineNum">     208 </span>            : 
+<span class="lineNum">     209 </span>            :         char buf[MAXBUF];
+<span class="lineNum">     210 </span><span class="lineCov">         32 :         int total_len = ssl_rx_timeout((uint8_t *) buf, MAXBUF, H11_TIMEOUT);</span>
+<span class="lineNum">     211 </span><span class="lineCov">         32 :         if (total_len == 0)</span>
+<span class="lineNum">     212 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineCov">         32 :         if (arg_debug)</span>
+<span class="lineNum">     215 </span><span class="lineNoCov">          0 :                 print_mem(buf, total_len);</span>
+<span class="lineNum">     216 </span><span class="lineCov">         32 :         if (arg_debug || arg_debug_transport) {</span>
+<span class="lineNum">     217 </span><span class="lineNoCov">          0 :                 print_time();</span>
+<span class="lineNum">     218 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d) rx len %d http/1.1 200 OK\n&quot;, arg_id, total_len);</span>
+<span class="lineNum">     219 </span>            :         }
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span><span class="lineCov">         32 :         h11_rx += 20 + 20 + 5 +  (int) ((float) total_len * 1.2); // ip + tcp + tls + http/1.1</span>
+<span class="lineNum">     222 </span>            : 
+<span class="lineNum">     223 </span>            :         // check 200 OK
+<span class="lineNum">     224 </span><span class="lineCov">         32 :         char *ptr = strstr(buf, &quot;200 OK&quot;);</span>
+<span class="lineNum">     225 </span><span class="lineCov">         32 :         if (!ptr) {</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :                 buf[16] = '\0';</span>
+<span class="lineNum">     227 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: HTTP/1.1 error: %s\n&quot;, buf);</span>
+<span class="lineNum">     228 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     229 </span>            :         }
+<span class="lineNum">     230 </span>            : 
+<span class="lineNum">     231 </span>            :         // look for the end of http header
+<span class="lineNum">     232 </span><span class="lineCov">         32 :         ptr = strstr(buf, &quot;\r\n\r\n&quot;);</span>
+<span class="lineNum">     233 </span><span class="lineCov">         32 :         if (!ptr) {</span>
+<span class="lineNum">     234 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: cannot parse HTTP/1.1 response, didn't recieve a full http header\n&quot;);</span>
+<span class="lineNum">     235 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     236 </span>            :         }
+<span class="lineNum">     237 </span><span class="lineCov">         32 :         ptr += 4; // length of &quot;\r\n\r\n&quot;</span>
+<span class="lineNum">     238 </span><span class="lineCov">         32 :         ptrdiff_t hlen = ptr - buf;</span>
+<span class="lineNum">     239 </span>            : 
+<span class="lineNum">     240 </span><span class="lineCov">         32 :         h11_header_total_len += hlen;</span>
+<span class="lineNum">     241 </span><span class="lineCov">         32 :         h11_header_cnt++;</span>
+<span class="lineNum">     242 </span><span class="lineCov">         32 :         *(ptr - 1) = 0;</span>
+<span class="lineNum">     243 </span><span class="lineCov">         32 :         if ((arg_debug || arg_details) &amp;&amp; first_query) {</span>
+<span class="lineNum">     244 </span><span class="lineCov">          1 :                 print_header(buf);</span>
+<span class="lineNum">     245 </span><span class="lineCov">          1 :                 printf(&quot;\n   Network trace:\n&quot;);</span>
+<span class="lineNum">     246 </span><span class="lineCov">          1 :                 printf(&quot;-----&gt; rx %d bytes: IP + TCP + TLS + HTTP/1.1\n&quot;, 20 + 20 + 5 + (int) ((float) total_len * 1.2));</span>
+<span class="lineNum">     247 </span>            :         }
+<span class="lineNum">     248 </span>            : 
+<span class="lineNum">     249 </span>            :         // look for Content-Length:
+<span class="lineNum">     250 </span><span class="lineCov">         32 :         char *contlen = &quot;Content-Length: &quot;;</span>
+<span class="lineNum">     251 </span><span class="lineCov">         32 :         ptr = strcasestr(buf, contlen);</span>
+<span class="lineNum">     252 </span><span class="lineCov">         32 :         int datalen = 0;</span>
+<span class="lineNum">     253 </span><span class="lineCov">         32 :         if (!ptr) {</span>
+<span class="lineNum">     254 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Warning: cannot parse HTTPS response, content-length missing\n&quot;);</span>
+<span class="lineNum">     255 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     256 </span>            :         }
+<span class="lineNum">     257 </span>            :         else {
+<span class="lineNum">     258 </span><span class="lineCov">         32 :                 ptr += strlen(contlen);</span>
+<span class="lineNum">     259 </span><span class="lineCov">         32 :                 sscanf(ptr, &quot;%d&quot;, &amp;datalen);</span>
+<span class="lineNum">     260 </span><span class="lineCov">         32 :                 if (datalen == 0) // we got a &quot;Content-lenght: 0&quot;; this is probably a HTTP error</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :                         return 0;</span>
+<span class="lineNum">     262 </span>            :         }
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span>            :         // give it another chance
+<span class="lineNum">     265 </span><span class="lineCov">         32 :         if ((hlen + datalen) &gt; total_len) {</span>
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :                 int len = ssl_rx_timeout((uint8_t *) buf + hlen, MAXBUF - hlen, H11_TIMEOUT);</span>
+<span class="lineNum">     267 </span><span class="lineNoCov">          0 :                 if (len == 0)</span>
+<span class="lineNum">     268 </span><span class="lineNoCov">          0 :                         goto errout;</span>
+<span class="lineNum">     269 </span><span class="lineNoCov">          0 :                 total_len += len;</span>
+<span class="lineNum">     270 </span><span class="lineNoCov">          0 :                 h11_rx += 20 + 20 + 5 + (int) ((float) len * 1.2); // ip + tcp + tls + http/1.1</span>
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :                 if ((arg_debug || arg_details) &amp;&amp; first_query)</span>
+<span class="lineNum">     272 </span><span class="lineNoCov">          0 :                         printf(&quot;-----&gt; rx %d bytes: IP + TCP + TLS + HTTP/1.1\n&quot;, 20 + 20 + 5 + (int) ((float) len * 1.2));</span>
+<span class="lineNum">     273 </span><span class="lineNoCov">          0 :                 if (arg_debug || arg_debug_transport) {</span>
+<span class="lineNum">     274 </span><span class="lineNoCov">          0 :                         print_time();</span>
+<span class="lineNum">     275 </span><span class="lineNoCov">          0 :                         printf(&quot;(%d) rx len %d http/1.1 200 OK (cont)\n&quot;, arg_id, len);</span>
+<span class="lineNum">     276 </span>            :                 }
+<span class="lineNum">     277 </span>            :         }
+<span class="lineNum">     278 </span><span class="lineCov">         32 :         if ((arg_debug || arg_details) &amp;&amp; first_query)</span>
+<span class="lineNum">     279 </span><span class="lineCov">          1 :                 printf(&quot;\n&quot;);</span>
+<span class="lineNum">     280 </span>            : 
+<span class="lineNum">     281 </span>            :         // bailout!
+<span class="lineNum">     282 </span><span class="lineCov">         32 :         if ((hlen + datalen) &gt; total_len)</span>
+<span class="lineNum">     283 </span><span class="lineNoCov">          0 :                 goto errout;</span>
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span><span class="lineCov">         32 :         ptr = buf + hlen;</span>
+<span class="lineNum">     286 </span><span class="lineCov">         32 :         if (arg_debug)</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :                 print_mem(ptr, datalen);</span>
+<span class="lineNum">     288 </span>            : 
+<span class="lineNum">     289 </span><span class="lineCov">         32 :         h11_rx_dns += 20 + 8 + datalen; // ip + udp + dns</span>
+<span class="lineNum">     290 </span>            :         // copy response in buf_query_data
+<span class="lineNum">     291 </span><span class="lineCov">         32 :         if (datalen != 0) {</span>
+<span class="lineNum">     292 </span><span class="lineCov">         32 :                 memcpy(response, ptr, datalen);</span>
+<span class="lineNum">     293 </span><span class="lineCov">         32 :                 return datalen;</span>
+<span class="lineNum">     294 </span>            :         }
+<span class="lineNum">     295 </span>            : 
+<span class="lineNum">     296 </span>            : 
+<span class="lineNum">     297 </span><span class="lineNoCov">          0 : errout:</span>
+<span class="lineNum">     298 </span><span class="lineNoCov">          0 :         if (arg_id &gt; 0)</span>
+<span class="lineNum">     299 </span><span class="lineNoCov">          0 :                 rlogprintf(&quot;Error: http/1.1 timeout\n&quot;);</span>
+<span class="lineNum">     300 </span>            :         else
+<span class="lineNum">     301 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Error: http/1.1 timeout\n&quot;);</span>
+<span class="lineNum">     302 </span><span class="lineNoCov">          0 :         fflush(0);</span>
+<span class="lineNum">     303 </span><span class="lineNoCov">          0 :         if (ssl_state == SSL_OPEN)</span>
+<span class="lineNum">     304 </span><span class="lineNoCov">          0 :                 ssl_close();</span>
+<span class="lineNum">     305 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     306 </span>            : }
+<span class="lineNum">     307 </span>            : 
+<span class="lineNum">     308 </span>            : 
+<span class="lineNum">     309 </span>            : 
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

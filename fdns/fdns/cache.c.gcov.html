@@ -31,17 +31,17 @@
             <td class="headerValue">gcov-file</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">57</td>
-            <td class="headerCovTableEntry">73</td>
-            <td class="headerCovTableEntryMed">78.1 %</td>
+            <td class="headerCovTableEntry">64</td>
+            <td class="headerCovTableEntry">96</td>
+            <td class="headerCovTableEntryLo">66.7 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">8</td>
-            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntry">9</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -61,7 +61,7 @@
 <pre class="sourceHeading">          Line data    Source code</pre>
 <pre class="source">
 <a name="1"><span class="lineNum">       1 </span>            : /*</a>
-<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
 <span class="lineNum">       3 </span>            :  *
 <span class="lineNum">       4 </span>            :  * This file is part of fdns project
 <span class="lineNum">       5 </span>            :  *
@@ -91,7 +91,7 @@
 <span class="lineNum">      29 </span>            :         struct cache_entry_t *next;
 <span class="lineNum">      30 </span>            :         int16_t  ttl;
 <span class="lineNum">      31 </span>            :         uint16_t len;
-<span class="lineNum">      32 </span>            :         int type; // 0 - ipv4,, 1 - ipv6
+<span class="lineNum">      32 </span>            :         int qtype; // query type: 0 - ipv4,, 1 - ipv6
 <span class="lineNum">      33 </span>            :         char name[CACHE_NAME_LEN + 1];
 <span class="lineNum">      34 </span>            : #define MAX_REPLY 900
 <span class="lineNum">      35 </span>            :         uint8_t reply[MAX_REPLY];
@@ -99,135 +99,169 @@
 <span class="lineNum">      37 </span>            : 
 <span class="lineNum">      38 </span>            : #define MAX_HASH_ARRAY 256
 <span class="lineNum">      39 </span>            : static CacheEntry *clist[MAX_HASH_ARRAY];
-<span class="lineNum">      40 </span>            : static char cname[CACHE_NAME_LEN + 1] = {0};
-<span class="lineNum">      41 </span>            : static int cname_type;  // 0 - ipv4, 1 - ipv6
-<a name="42"><span class="lineNum">      42 </span>            : static uint8_t creply[MAX_REPLY];</a>
-<span class="lineNum">      43 </span>            : 
-<span class="lineNum">      44 </span><span class="lineCov">         18 : static inline void clean_entry(CacheEntry *ptr) {</span>
-<span class="lineNum">      45 </span><span class="lineCov">         18 :         ptr-&gt;next = NULL;</span>
-<span class="lineNum">      46 </span><span class="lineCov">         18 :         ptr-&gt;ttl = 0;</span>
-<span class="lineNum">      47 </span><span class="lineCov">         18 :         ptr-&gt;type = 0;</span>
-<span class="lineNum">      48 </span><span class="lineCov">         18 :         ptr-&gt;name[0] = '\0';</span>
-<span class="lineNum">      49 </span><span class="lineCov">         18 : }</span>
-<a name="50"><span class="lineNum">      50 </span>            : </a>
-<span class="lineNum">      51 </span>            : // djb2 hash function by Dan Bernstein
-<span class="lineNum">      52 </span><span class="lineCov">         41 : static inline int hash(const char *str, int type) {</span>
-<span class="lineNum">      53 </span><span class="lineCov">         41 :         uint32_t hash = 5381;</span>
-<span class="lineNum">      54 </span>            :         int c;
-<span class="lineNum">      55 </span>            : 
-<span class="lineNum">      56 </span><span class="lineCov">        574 :         while ((c = *str++) != '\0')</span>
-<span class="lineNum">      57 </span><span class="lineCov">        533 :                 hash = ((hash &lt;&lt; 5) + hash) ^ c; // hash * 33 ^ c</span>
-<span class="lineNum">      58 </span>            : 
-<span class="lineNum">      59 </span><span class="lineCov">         41 :         return (int) ((hash &amp; (MAX_HASH_ARRAY - 1)) ^ type);</span>
-<a name="60"><span class="lineNum">      60 </span>            : }</a>
-<span class="lineNum">      61 </span>            : 
-<span class="lineNum">      62 </span><span class="lineCov">        167 : void cache_init(void) {</span>
-<span class="lineNum">      63 </span><span class="lineCov">        167 :         memset(&amp;clist[0], 0, sizeof(clist));</span>
-<span class="lineNum">      64 </span><span class="lineCov">        167 :         memset(cname, 0, sizeof(cname));</span>
-<a name="65"><span class="lineNum">      65 </span><span class="lineCov">        167 : }</span></a>
-<span class="lineNum">      66 </span>            : 
-<span class="lineNum">      67 </span><span class="lineCov">         97 : void cache_set_name(const char *name, int ipv6) {</span>
-<span class="lineNum">      68 </span><span class="lineCov">         97 :         assert(name);</span>
-<span class="lineNum">      69 </span><span class="lineCov">         97 :         strncpy(cname, name, CACHE_NAME_LEN);</span>
-<span class="lineNum">      70 </span><span class="lineCov">         97 :         cname[CACHE_NAME_LEN] = '\0';</span>
-<span class="lineNum">      71 </span><span class="lineCov">         97 :         cname_type = ipv6;</span>
-<a name="72"><span class="lineNum">      72 </span><span class="lineCov">         97 : }</span></a>
-<span class="lineNum">      73 </span>            : 
-<span class="lineNum">      74 </span><span class="lineCov">          1 : const char *cache_get_name(void) {</span>
-<span class="lineNum">      75 </span><span class="lineCov">          1 :         return cname;</span>
-<a name="76"><span class="lineNum">      76 </span>            : }</a>
-<span class="lineNum">      77 </span>            : 
-<span class="lineNum">      78 </span><span class="lineCov">        366 : void cache_set_reply(uint8_t *reply, ssize_t len, int ttl) {</span>
-<span class="lineNum">      79 </span><span class="lineCov">        366 :         assert(reply);</span>
-<span class="lineNum">      80 </span><span class="lineCov">        366 :         assert(ttl &gt; 0);</span>
-<span class="lineNum">      81 </span><span class="lineCov">        366 :         if (len == 0 || len &gt; MAX_REPLY || *cname == '\0') {</span>
-<span class="lineNum">      82 </span><span class="lineCov">        348 :                 *cname = '\0';</span>
-<span class="lineNum">      83 </span><span class="lineCov">        348 :                 return;</span>
-<span class="lineNum">      84 </span>            :         }
-<span class="lineNum">      85 </span>            : 
-<span class="lineNum">      86 </span><span class="lineCov">         18 :         int h = hash(cname, cname_type);</span>
-<span class="lineNum">      87 </span><span class="lineCov">         18 :         CacheEntry *ptr = malloc(sizeof(CacheEntry));</span>
-<span class="lineNum">      88 </span><span class="lineCov">         18 :         if (!ptr)</span>
-<span class="lineNum">      89 </span><span class="lineNoCov">          0 :                 errExit(&quot;malloc&quot;);</span>
-<span class="lineNum">      90 </span><span class="lineCov">         18 :         clean_entry(ptr);</span>
-<span class="lineNum">      91 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">      92 </span>            :         sentries++;
-<span class="lineNum">      93 </span>            : #endif
-<span class="lineNum">      94 </span><span class="lineCov">         18 :         ptr-&gt;len = len;</span>
-<span class="lineNum">      95 </span><span class="lineCov">         18 :         ptr-&gt;type = cname_type;</span>
-<span class="lineNum">      96 </span>            :         assert(sizeof(cname) == sizeof(ptr-&gt;name));
-<span class="lineNum">      97 </span><span class="lineCov">         18 :         memcpy(ptr-&gt;name, cname, sizeof(cname));</span>
-<span class="lineNum">      98 </span><span class="lineCov">         18 :         memcpy(ptr-&gt;reply, reply, len);</span>
-<span class="lineNum">      99 </span><span class="lineCov">         18 :         ptr-&gt;ttl = (int16_t) ttl;</span>
-<span class="lineNum">     100 </span>            : 
-<span class="lineNum">     101 </span><span class="lineCov">         18 :         ptr-&gt;next = clist[h];</span>
-<span class="lineNum">     102 </span><span class="lineCov">         18 :         clist[h] = ptr;</span>
-<span class="lineNum">     103 </span><span class="lineCov">         18 :         *cname = '\0';</span>
-<span class="lineNum">     104 </span>            : }
-<a name="105"><span class="lineNum">     105 </span>            : </a>
-<span class="lineNum">     106 </span>            : 
-<span class="lineNum">     107 </span><span class="lineCov">         23 : uint8_t *cache_check(uint16_t id, const char *name, ssize_t *lenptr, int ipv6) {</span>
-<span class="lineNum">     108 </span><span class="lineCov">         23 :         assert(name);</span>
-<span class="lineNum">     109 </span><span class="lineCov">         23 :         int h = hash(name, ipv6);</span>
-<span class="lineNum">     110 </span><span class="lineCov">         23 :         CacheEntry *ptr = clist[h];</span>
-<span class="lineNum">     111 </span><span class="lineCov">         23 :         while (ptr) {</span>
-<span class="lineNum">     112 </span><span class="lineNoCov">          0 :                 if (strcmp(ptr-&gt;name, name) == 0 &amp;&amp; ptr-&gt;type == ipv6) {</span>
-<span class="lineNum">     113 </span>            :                         // store the reply locally
-<span class="lineNum">     114 </span><span class="lineNoCov">          0 :                         assert(ptr-&gt;len);</span>
-<span class="lineNum">     115 </span><span class="lineNoCov">          0 :                         assert(ptr-&gt;len &lt; MAX_REPLY);</span>
-<span class="lineNum">     116 </span><span class="lineNoCov">          0 :                         memcpy(creply, ptr-&gt;reply, ptr-&gt;len);</span>
-<span class="lineNum">     117 </span>            :                         // set id
-<span class="lineNum">     118 </span><span class="lineNoCov">          0 :                         id = htons(id);</span>
-<span class="lineNum">     119 </span><span class="lineNoCov">          0 :                         memcpy(creply, &amp;id, 2);</span>
-<span class="lineNum">     120 </span>            :                         // set length
-<span class="lineNum">     121 </span><span class="lineNoCov">          0 :                         *lenptr = ptr-&gt;len;</span>
-<span class="lineNum">     122 </span>            : 
-<span class="lineNum">     123 </span><span class="lineNoCov">          0 :                         return creply;</span>
-<span class="lineNum">     124 </span>            :                 }
-<span class="lineNum">     125 </span>            : 
-<span class="lineNum">     126 </span><span class="lineNoCov">          0 :                 ptr = ptr-&gt;next;</span>
-<span class="lineNum">     127 </span>            :         }
-<span class="lineNum">     128 </span>            : 
-<span class="lineNum">     129 </span><span class="lineCov">         23 :         return NULL;</span>
-<a name="130"><span class="lineNum">     130 </span>            : }</a>
-<span class="lineNum">     131 </span>            : 
-<span class="lineNum">     132 </span><span class="lineCov">        433 : void cache_timeout(void) {</span>
-<span class="lineNum">     133 </span>            :         int i;
-<span class="lineNum">     134 </span>            : 
-<span class="lineNum">     135 </span><span class="lineCov">     111281 :         for (i = 0; i &lt; MAX_HASH_ARRAY; i++) {</span>
-<span class="lineNum">     136 </span><span class="lineCov">     110848 :                 CacheEntry *ptr = clist[i];</span>
-<span class="lineNum">     137 </span><span class="lineCov">     110848 :                 CacheEntry *last = NULL;</span>
-<span class="lineNum">     138 </span>            : 
-<span class="lineNum">     139 </span><span class="lineCov">     110915 :                 while (ptr) {</span>
-<span class="lineNum">     140 </span><span class="lineCov">         67 :                         ptr-&gt;ttl--;</span>
-<span class="lineNum">     141 </span><span class="lineCov">         67 :                         if (ptr-&gt;ttl &lt;= 0) {</span>
-<span class="lineNum">     142 </span><span class="lineNoCov">          0 :                                 if (last == NULL)</span>
-<span class="lineNum">     143 </span><span class="lineNoCov">          0 :                                         clist[i] = ptr-&gt;next;</span>
-<span class="lineNum">     144 </span>            :                                 else
-<span class="lineNum">     145 </span><span class="lineNoCov">          0 :                                         last-&gt;next = ptr-&gt;next;</span>
-<span class="lineNum">     146 </span><span class="lineNoCov">          0 :                                 CacheEntry *tmp = ptr;</span>
-<span class="lineNum">     147 </span><span class="lineNoCov">          0 :                                 ptr = ptr-&gt;next;</span>
-<span class="lineNum">     148 </span><span class="lineNoCov">          0 :                                 free(tmp);</span>
-<span class="lineNum">     149 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">     150 </span>            :                                 sentries--;
-<span class="lineNum">     151 </span>            : #endif
-<span class="lineNum">     152 </span>            :                         }
-<span class="lineNum">     153 </span>            :                         else {
-<span class="lineNum">     154 </span><span class="lineCov">         67 :                                 last = ptr;</span>
-<span class="lineNum">     155 </span><span class="lineCov">         67 :                                 ptr = ptr-&gt;next;</span>
-<span class="lineNum">     156 </span>            :                         }
-<span class="lineNum">     157 </span>            :                 }
-<span class="lineNum">     158 </span>            :         }
-<span class="lineNum">     159 </span>            : 
-<span class="lineNum">     160 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">     161 </span>            :         scnt++;
-<span class="lineNum">     162 </span>            :         if (scnt &gt;= 60) {
-<span class="lineNum">     163 </span>            :                 printf(&quot;*** (%d) cache entries %u, mem %lu, cache ttl %d\n&quot;, arg_id, sentries, (unsigned) sentries * sizeof(CacheEntry) + (unsigned) sizeof(clist), arg_cache_ttl);
-<span class="lineNum">     164 </span>            :                 fflush(0);
-<span class="lineNum">     165 </span>            :                 scnt = 0;
-<span class="lineNum">     166 </span>            :         }
-<span class="lineNum">     167 </span>            : #endif
-<span class="lineNum">     168 </span><span class="lineCov">        433 : }</span>
+<span class="lineNum">      40 </span>            : static int ccnt = 0;
+<span class="lineNum">      41 </span>            : static char cname[CACHE_NAME_LEN + 1] = {0};
+<span class="lineNum">      42 </span>            : static int cname_type;  // 0 - ipv4, 1 - ipv6
+<a name="43"><span class="lineNum">      43 </span>            : static uint8_t creply[MAX_REPLY];</a>
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span><span class="lineCov">         17 : static inline void clean_entry(CacheEntry *ptr) {</span>
+<span class="lineNum">      46 </span><span class="lineCov">         17 :         ptr-&gt;next = NULL;</span>
+<span class="lineNum">      47 </span><span class="lineCov">         17 :         ptr-&gt;ttl = 0;</span>
+<span class="lineNum">      48 </span><span class="lineCov">         17 :         ptr-&gt;qtype = 0;</span>
+<span class="lineNum">      49 </span><span class="lineCov">         17 :         ptr-&gt;name[0] = '\0';</span>
+<span class="lineNum">      50 </span><span class="lineCov">         17 : }</span>
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<span class="lineNum">      52 </span>            : // djb2 hash function by Dan Bernstein
+<span class="lineNum">      53 </span><span class="lineCov">         41 : static inline int hash(const char *str, int qtype) {</span>
+<span class="lineNum">      54 </span><span class="lineCov">         41 :         uint32_t hash = 5381;</span>
+<span class="lineNum">      55 </span>            :         int c;
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span><span class="lineCov">        580 :         while ((c = *str++) != '\0')</span>
+<span class="lineNum">      58 </span><span class="lineCov">        539 :                 hash = ((hash &lt;&lt; 5) + hash) ^ c; // hash * 33 ^ c</span>
+<span class="lineNum">      59 </span>            : 
+<span class="lineNum">      60 </span><span class="lineCov">         41 :         return (int) ((hash &amp; (MAX_HASH_ARRAY - 1)) ^ qtype);</span>
+<a name="61"><span class="lineNum">      61 </span>            : }</a>
+<span class="lineNum">      62 </span>            : 
+<span class="lineNum">      63 </span><span class="lineCov">        197 : void cache_init(void) {</span>
+<span class="lineNum">      64 </span><span class="lineCov">        197 :         memset(&amp;clist[0], 0, sizeof(clist));</span>
+<span class="lineNum">      65 </span><span class="lineCov">        197 :         memset(cname, 0, sizeof(cname));</span>
+<span class="lineNum">      66 </span><span class="lineCov">        197 :         ccnt = 0;</span>
+<a name="67"><span class="lineNum">      67 </span><span class="lineCov">        197 : }</span></a>
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span><span class="lineCov">        116 : void cache_set_name(const char *name, int qtype) {</span>
+<span class="lineNum">      70 </span><span class="lineCov">        116 :         assert(name);</span>
+<span class="lineNum">      71 </span><span class="lineCov">        116 :         strncpy(cname, name, CACHE_NAME_LEN);</span>
+<span class="lineNum">      72 </span><span class="lineCov">        116 :         cname[CACHE_NAME_LEN] = '\0';</span>
+<span class="lineNum">      73 </span><span class="lineCov">        116 :         cname_type = qtype;</span>
+<a name="74"><span class="lineNum">      74 </span><span class="lineCov">        116 : }</span></a>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">         33 : const char *cache_get_name(void) {</span>
+<span class="lineNum">      77 </span><span class="lineCov">         33 :         return cname;</span>
+<a name="78"><span class="lineNum">      78 </span>            : }</a>
+<span class="lineNum">      79 </span>            : 
+<span class="lineNum">      80 </span><span class="lineCov">         17 : void cache_set_reply(uint8_t *reply, ssize_t len, int ttl) {</span>
+<span class="lineNum">      81 </span><span class="lineCov">         17 :         assert(reply);</span>
+<span class="lineNum">      82 </span><span class="lineCov">         17 :         assert(ttl &gt; 0);</span>
+<span class="lineNum">      83 </span><span class="lineCov">         17 :         if (len == 0 || len &gt; MAX_REPLY || *cname == '\0') {</span>
+<span class="lineNum">      84 </span><span class="lineNoCov">          0 :                 *cname = '\0';</span>
+<span class="lineNum">      85 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">      86 </span>            :         }
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span><span class="lineCov">         17 :         int h = hash(cname, cname_type);</span>
+<span class="lineNum">      89 </span><span class="lineCov">         17 :         CacheEntry *ptr = malloc(sizeof(CacheEntry));</span>
+<span class="lineNum">      90 </span><span class="lineCov">         17 :         if (!ptr)</span>
+<span class="lineNum">      91 </span><span class="lineNoCov">          0 :                 errExit(&quot;malloc&quot;);</span>
+<span class="lineNum">      92 </span><span class="lineCov">         17 :         clean_entry(ptr);</span>
+<span class="lineNum">      93 </span><span class="lineCov">         17 :         ccnt++;</span>
+<span class="lineNum">      94 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">      95 </span>            :         sentries++;
+<span class="lineNum">      96 </span>            : #endif
+<span class="lineNum">      97 </span><span class="lineCov">         17 :         ptr-&gt;len = len;</span>
+<span class="lineNum">      98 </span><span class="lineCov">         17 :         ptr-&gt;qtype = cname_type;</span>
+<span class="lineNum">      99 </span>            :         assert(sizeof(cname) == sizeof(ptr-&gt;name));
+<span class="lineNum">     100 </span><span class="lineCov">         17 :         memcpy(ptr-&gt;name, cname, sizeof(cname));</span>
+<span class="lineNum">     101 </span><span class="lineCov">         17 :         memcpy(ptr-&gt;reply, reply, len);</span>
+<span class="lineNum">     102 </span><span class="lineCov">         17 :         ptr-&gt;ttl = (int16_t) ttl;</span>
+<span class="lineNum">     103 </span>            : 
+<span class="lineNum">     104 </span><span class="lineCov">         17 :         ptr-&gt;next = clist[h];</span>
+<span class="lineNum">     105 </span><span class="lineCov">         17 :         clist[h] = ptr;</span>
+<span class="lineNum">     106 </span><span class="lineCov">         17 :         *cname = '\0';</span>
+<a name="107"><span class="lineNum">     107 </span>            : }</a>
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span><span class="lineCov">         24 : uint8_t *cache_check(uint16_t id, const char *name, ssize_t *lenptr, int qtype) {</span>
+<span class="lineNum">     110 </span><span class="lineCov">         24 :         assert(name);</span>
+<span class="lineNum">     111 </span><span class="lineCov">         24 :         int h = hash(name, qtype);</span>
+<span class="lineNum">     112 </span><span class="lineCov">         24 :         CacheEntry *ptr = clist[h];</span>
+<span class="lineNum">     113 </span><span class="lineCov">         24 :         while (ptr) {</span>
+<span class="lineNum">     114 </span><span class="lineNoCov">          0 :                 if (strcmp(ptr-&gt;name, name) == 0 &amp;&amp; ptr-&gt;qtype == qtype) {</span>
+<span class="lineNum">     115 </span>            :                         // store the reply locally
+<span class="lineNum">     116 </span><span class="lineNoCov">          0 :                         assert(ptr-&gt;len);</span>
+<span class="lineNum">     117 </span><span class="lineNoCov">          0 :                         assert(ptr-&gt;len &lt; MAX_REPLY);</span>
+<span class="lineNum">     118 </span><span class="lineNoCov">          0 :                         memcpy(creply, ptr-&gt;reply, ptr-&gt;len);</span>
+<span class="lineNum">     119 </span>            :                         // set id
+<span class="lineNum">     120 </span><span class="lineNoCov">          0 :                         id = htons(id);</span>
+<span class="lineNum">     121 </span><span class="lineNoCov">          0 :                         memcpy(creply, &amp;id, 2);</span>
+<span class="lineNum">     122 </span>            :                         // set length
+<span class="lineNum">     123 </span><span class="lineNoCov">          0 :                         *lenptr = ptr-&gt;len;</span>
+<span class="lineNum">     124 </span>            : 
+<span class="lineNum">     125 </span><span class="lineNoCov">          0 :                         return creply;</span>
+<span class="lineNum">     126 </span>            :                 }
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span><span class="lineNoCov">          0 :                 ptr = ptr-&gt;next;</span>
+<span class="lineNum">     129 </span>            :         }
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span><span class="lineCov">         24 :         return NULL;</span>
+<a name="132"><span class="lineNum">     132 </span>            : }</a>
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span><span class="lineCov">        496 : void cache_timeout(void) {</span>
+<span class="lineNum">     135 </span>            :         int i;
+<span class="lineNum">     136 </span>            : 
+<span class="lineNum">     137 </span><span class="lineCov">        496 :         int cnt = 0;</span>
+<span class="lineNum">     138 </span><span class="lineCov">     127472 :         for (i = 0; i &lt; MAX_HASH_ARRAY; i++) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">     126976 :                 CacheEntry *ptr = clist[i];</span>
+<span class="lineNum">     140 </span><span class="lineCov">     126976 :                 CacheEntry *last = NULL;</span>
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span><span class="lineCov">     127043 :                 while (ptr) {</span>
+<span class="lineNum">     143 </span><span class="lineCov">         67 :                         ptr-&gt;ttl--;</span>
+<span class="lineNum">     144 </span><span class="lineCov">         67 :                         if (ptr-&gt;ttl &lt;= 0) {</span>
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :                                 if (last == NULL)</span>
+<span class="lineNum">     146 </span><span class="lineNoCov">          0 :                                         clist[i] = ptr-&gt;next;</span>
+<span class="lineNum">     147 </span>            :                                 else
+<span class="lineNum">     148 </span><span class="lineNoCov">          0 :                                         last-&gt;next = ptr-&gt;next;</span>
+<span class="lineNum">     149 </span><span class="lineNoCov">          0 :                                 CacheEntry *tmp = ptr;</span>
+<span class="lineNum">     150 </span><span class="lineNoCov">          0 :                                 ptr = ptr-&gt;next;</span>
+<span class="lineNum">     151 </span><span class="lineNoCov">          0 :                                 free(tmp);</span>
+<span class="lineNum">     152 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     153 </span>            :                                 sentries--;
+<span class="lineNum">     154 </span>            : #endif
+<span class="lineNum">     155 </span>            :                         }
+<span class="lineNum">     156 </span>            :                         else {
+<span class="lineNum">     157 </span><span class="lineCov">         67 :                                 last = ptr;</span>
+<span class="lineNum">     158 </span><span class="lineCov">         67 :                                 ptr = ptr-&gt;next;</span>
+<span class="lineNum">     159 </span>            :                         }
+<span class="lineNum">     160 </span><span class="lineCov">         67 :                         cnt++;</span>
+<span class="lineNum">     161 </span>            :                 }
+<span class="lineNum">     162 </span>            :         }
+<span class="lineNum">     163 </span><span class="lineCov">        496 :         ccnt = cnt;</span>
+<span class="lineNum">     164 </span>            : 
+<span class="lineNum">     165 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     166 </span>            :         scnt++;
+<span class="lineNum">     167 </span>            :         if (scnt &gt;= 60) {
+<span class="lineNum">     168 </span>            :                 printf(&quot;*** (%d) cache entries %u, mem %lu, cache ttl %d\n&quot;, arg_id, sentries, (unsigned) sentries * sizeof(CacheEntry) + (unsigned) sizeof(clist), arg_cache_ttl);
+<span class="lineNum">     169 </span>            :                 fflush(0);
+<span class="lineNum">     170 </span>            :                 scnt = 0;
+<span class="lineNum">     171 </span>            :         }
+<span class="lineNum">     172 </span>            : #endif
+<span class="lineNum">     173 </span><span class="lineCov">        496 : }</span>
+<a name="174"><span class="lineNum">     174 </span>            : </a>
+<span class="lineNum">     175 </span>            : static int ctimer = CACHE_PRINT_TIMEOUT;
+<span class="lineNum">     176 </span><span class="lineCov">        496 : void print_cache(void) {</span>
+<span class="lineNum">     177 </span><span class="lineCov">        496 :         if (arg_daemonize)</span>
+<span class="lineNum">     178 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">     179 </span><span class="lineCov">        496 :         if (--ctimer &gt; 0)</span>
+<span class="lineNum">     180 </span><span class="lineCov">        496 :                 return;</span>
+<span class="lineNum">     181 </span><span class="lineNoCov">          0 :         if (ccnt == 0)</span>
+<span class="lineNum">     182 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">     183 </span>            : 
+<span class="lineNum">     184 </span><span class="lineNoCov">          0 :         ctimer = CACHE_PRINT_TIMEOUT;</span>
+<span class="lineNum">     185 </span><span class="lineNoCov">          0 :         printf(&quot;Cache %d: &quot;, arg_id);</span>
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span>            :         int i;
+<span class="lineNum">     188 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; MAX_HASH_ARRAY; i++) {</span>
+<span class="lineNum">     189 </span><span class="lineNoCov">          0 :                 CacheEntry *ptr = clist[i];</span>
+<span class="lineNum">     190 </span>            : 
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :                 while (ptr) {</span>
+<span class="lineNum">     192 </span><span class="lineNoCov">          0 :                         printf(&quot;%s, &quot;, ptr-&gt;name);</span>
+<span class="lineNum">     193 </span><span class="lineNoCov">          0 :                         ptr = ptr-&gt;next;</span>
+<span class="lineNum">     194 </span>            :                 }
+<span class="lineNum">     195 </span>            :         }
+<span class="lineNum">     196 </span>            : 
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :         if (ccnt == 1)</span>
+<span class="lineNum">     198 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d domain)\n&quot;, ccnt);</span>
+<span class="lineNum">     199 </span>            :         else
+<span class="lineNum">     200 </span><span class="lineNoCov">          0 :                 printf(&quot;(%d domains)\n&quot;, ccnt);</span>
+<span class="lineNum">     201 </span><span class="lineNoCov">          0 :         fflush(0);</span>
+<span class="lineNum">     202 </span>            : }
 </pre>
       </td>
     </tr>

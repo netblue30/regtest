@@ -31,13 +31,13 @@
             <td class="headerValue">gcov-file</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">195</td>
-            <td class="headerCovTableEntry">225</td>
-            <td class="headerCovTableEntryMed">86.7 %</td>
+            <td class="headerCovTableEntry">227</td>
+            <td class="headerCovTableEntry">272</td>
+            <td class="headerCovTableEntryMed">83.5 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">6</td>
@@ -61,7 +61,7 @@
 <pre class="sourceHeading">          Line data    Source code</pre>
 <pre class="source">
 <a name="1"><span class="lineNum">       1 </span>            : /*</a>
-<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
 <span class="lineNum">       3 </span>            :  *
 <span class="lineNum">       4 </span>            :  * This file is part of fdns project
 <span class="lineNum">       5 </span>            :  *
@@ -79,414 +79,490 @@
 <span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
 <span class="lineNum">      18 </span>            : */
 <span class="lineNum">      19 </span>            : #include &quot;fdns.h&quot;
-<span class="lineNum">      20 </span>            : #ifndef  _GNU_SOURCE
-<span class="lineNum">      21 </span>            : #define _GNU_SOURCE
-<span class="lineNum">      22 </span>            : #endif
-<span class="lineNum">      23 </span>            : #include &lt;sched.h&gt;        // clone
-<span class="lineNum">      24 </span>            : #include &lt;sys/wait.h&gt;
-<span class="lineNum">      25 </span>            : #include &lt;sys/prctl.h&gt;
-<span class="lineNum">      26 </span>            : #include &lt;sys/mount.h&gt;
-<span class="lineNum">      27 </span>            : #include &lt;errno.h&gt;
-<span class="lineNum">      28 </span>            : #include &lt;time.h&gt;
-<span class="lineNum">      29 </span>            : #include &lt;sys/stat.h&gt;
-<span class="lineNum">      30 </span>            : #include &lt;sys/un.h&gt;
-<span class="lineNum">      31 </span>            : 
-<span class="lineNum">      32 </span>            : #ifdef __ia64__
-<span class="lineNum">      33 </span>            : /* clone(2) has a different interface on ia64, as it needs to know
-<span class="lineNum">      34 </span>            :    the size of the stack */
-<span class="lineNum">      35 </span>            : int __clone2(int (*fn)(void *),
-<span class="lineNum">      36 </span>            :              void *child_stack_base, size_t stack_size,
-<span class="lineNum">      37 </span>            :              int flags, void *arg, ...
-<span class="lineNum">      38 </span>            :              /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
-<span class="lineNum">      39 </span>            : #endif
-<span class="lineNum">      40 </span>            : 
-<span class="lineNum">      41 </span>            : int encrypted[RESOLVERS_CNT_MAX];
-<span class="lineNum">      42 </span>            : 
-<span class="lineNum">      43 </span>            : typedef struct resolver_t {
-<span class="lineNum">      44 </span>            :         pid_t pid;
-<span class="lineNum">      45 </span>            :         int keepalive;
-<span class="lineNum">      46 </span>            :         int fd[2];
-<span class="lineNum">      47 </span>            : #define STACK_SIZE (1024 * 1024)
-<span class="lineNum">      48 </span>            : #define STACK_ALIGNMENT 16
-<span class="lineNum">      49 </span>            :         char child_stack[STACK_SIZE] __attribute__((aligned(STACK_ALIGNMENT)));; // space for child's stack
-<span class="lineNum">      50 </span>            : } Resolver;
-<span class="lineNum">      51 </span>            : static Resolver w[RESOLVERS_CNT_MAX];
-<a name="52"><span class="lineNum">      52 </span>            : </a>
-<span class="lineNum">      53 </span>            : static volatile sig_atomic_t got_SIGCHLD = 0;
-<span class="lineNum">      54 </span><span class="lineCov">         35 : static void child_sig_handler(int sig) {</span>
-<span class="lineNum">      55 </span>            :         (void) sig;
-<span class="lineNum">      56 </span><span class="lineCov">         35 :         got_SIGCHLD = 1;</span>
-<a name="57"><span class="lineNum">      57 </span><span class="lineCov">         35 : }</span></a>
-<span class="lineNum">      58 </span>            : 
-<span class="lineNum">      59 </span><span class="lineCov">         26 : static void my_handler(int s) {</span>
-<span class="lineNum">      60 </span><span class="lineCov">         26 :         logprintf(&quot;signal %d caught, shutting down all resolvers\n&quot;, s);</span>
-<span class="lineNum">      61 </span>            : 
-<span class="lineNum">      62 </span>            :         int i;
-<span class="lineNum">      63 </span><span class="lineCov">        116 :         for (i = 0; i &lt; arg_resolvers; i++)</span>
-<span class="lineNum">      64 </span><span class="lineCov">         90 :                 kill(w[i].pid, SIGKILL);</span>
-<span class="lineNum">      65 </span>            : 
-<span class="lineNum">      66 </span>            :         // attempt to remove shmem file
-<span class="lineNum">      67 </span><span class="lineCov">         26 :         int rv = unlink(&quot;/dev/shm/fdns-stats&quot;);</span>
-<span class="lineNum">      68 </span>            :         (void) rv;
-<span class="lineNum">      69 </span><span class="lineCov">         26 :         exit(0);</span>
-<a name="70"><span class="lineNum">      70 </span>            : }</a>
-<span class="lineNum">      71 </span>            : 
-<span class="lineNum">      72 </span><span class="lineCov">        104 : static int sandbox(void *sandbox_arg) {</span>
-<span class="lineNum">      73 </span><span class="lineCov">        104 :         int id = *(int *) sandbox_arg;</span>
-<span class="lineNum">      74 </span>            : 
-<span class="lineNum">      75 </span><span class="lineCov">        104 :         prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0); // kill this new process in case the parent died</span>
-<span class="lineNum">      76 </span>            : 
-<span class="lineNum">      77 </span>            :         // mount events are not forwarded between the host the sandbox
-<span class="lineNum">      78 </span><span class="lineCov">        104 :         if (mount(NULL, &quot;/&quot;, NULL, MS_SLAVE | MS_REC, NULL) &lt; 0)</span>
-<span class="lineNum">      79 </span><span class="lineNoCov">          0 :                 errExit(&quot;mount filesystem as slave&quot;);</span>
-<span class="lineNum">      80 </span>            : 
-<span class="lineNum">      81 </span>            :         char *idstr;
-<span class="lineNum">      82 </span><span class="lineCov">        104 :         if (asprintf(&amp;idstr, &quot;--id=%d&quot;, id) == -1)</span>
-<span class="lineNum">      83 </span><span class="lineNoCov">          0 :                 errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">      84 </span>            :         char *fdstr;
-<span class="lineNum">      85 </span><span class="lineCov">        104 :         if (asprintf(&amp;fdstr, &quot;--fd=%d&quot;, w[id].fd[1]) == -1)</span>
-<span class="lineNum">      86 </span><span class="lineNoCov">          0 :                 errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">      20 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      21 </span>            : #ifndef  _GNU_SOURCE
+<span class="lineNum">      22 </span>            : #define _GNU_SOURCE
+<span class="lineNum">      23 </span>            : #endif
+<span class="lineNum">      24 </span>            : #include &lt;sched.h&gt;        // clone
+<span class="lineNum">      25 </span>            : #include &lt;sys/wait.h&gt;
+<span class="lineNum">      26 </span>            : #include &lt;sys/prctl.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;sys/mount.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;errno.h&gt;
+<span class="lineNum">      29 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;sys/un.h&gt;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : #ifdef __ia64__
+<span class="lineNum">      34 </span>            : /* clone(2) has a different interface on ia64, as it needs to know
+<span class="lineNum">      35 </span>            :    the size of the stack */
+<span class="lineNum">      36 </span>            : int __clone2(int (*fn)(void *),
+<span class="lineNum">      37 </span>            :              void *child_stack_base, size_t stack_size,
+<span class="lineNum">      38 </span>            :              int flags, void *arg, ...
+<span class="lineNum">      39 </span>            :              /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
+<span class="lineNum">      40 </span>            : #endif
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            : typedef struct resolver_t {
+<span class="lineNum">      43 </span>            :         pid_t pid;
+<span class="lineNum">      44 </span>            :         int keepalive;
+<span class="lineNum">      45 </span>            :         int fd[2];
+<span class="lineNum">      46 </span>            : #define STACK_SIZE (1024 * 1024)
+<span class="lineNum">      47 </span>            : #define STACK_ALIGNMENT 16
+<span class="lineNum">      48 </span>            :         char child_stack[STACK_SIZE] __attribute__((aligned(STACK_ALIGNMENT)));; // space for child's stack
+<span class="lineNum">      49 </span>            : } Resolver;
+<span class="lineNum">      50 </span>            : static Resolver w[RESOLVERS_CNT_MAX];
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<span class="lineNum">      52 </span>            : static volatile sig_atomic_t got_SIGCHLD = 0;
+<span class="lineNum">      53 </span><span class="lineCov">         57 : static void child_sig_handler(int sig) {</span>
+<span class="lineNum">      54 </span>            :         (void) sig;
+<span class="lineNum">      55 </span><span class="lineCov">         57 :         got_SIGCHLD = 1;</span>
+<a name="56"><span class="lineNum">      56 </span><span class="lineCov">         57 : }</span></a>
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span><span class="lineCov">         30 : static void my_handler(int s) {</span>
+<span class="lineNum">      59 </span><span class="lineCov">         30 :         logprintf(&quot;signal %d caught, shutting down all resolvers\n&quot;, s);</span>
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            :         int i;
+<span class="lineNum">      62 </span><span class="lineCov">        106 :         for (i = 0; i &lt; arg_resolvers; i++)</span>
+<span class="lineNum">      63 </span><span class="lineCov">         76 :                 kill(w[i].pid, SIGKILL);</span>
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            :         // attempt to remove shmem file
+<span class="lineNum">      66 </span><span class="lineCov">         30 :         int rv = unlink(&quot;/dev/shm/fdns-stats&quot;);</span>
+<span class="lineNum">      67 </span>            :         (void) rv;
+<span class="lineNum">      68 </span><span class="lineCov">         30 :         exit(0);</span>
+<a name="69"><span class="lineNum">      69 </span>            : }</a>
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span><span class="lineCov">         89 : static int sandbox(void *sandbox_arg) {</span>
+<span class="lineNum">      72 </span><span class="lineCov">         89 :         int id = *(int *) sandbox_arg;</span>
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span><span class="lineCov">         89 :         prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0); // kill this new process in case the parent died</span>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span>            :         // mount events are not forwarded between the host the sandbox
+<span class="lineNum">      77 </span><span class="lineCov">         89 :         if (mount(NULL, &quot;/&quot;, NULL, MS_SLAVE | MS_REC, NULL) &lt; 0)</span>
+<span class="lineNum">      78 </span><span class="lineNoCov">          0 :                 errExit(&quot;mount filesystem as slave&quot;);</span>
+<span class="lineNum">      79 </span>            : 
+<span class="lineNum">      80 </span>            :         char *idstr;
+<span class="lineNum">      81 </span><span class="lineCov">         89 :         if (asprintf(&amp;idstr, &quot;--id=%d&quot;, id) == -1)</span>
+<span class="lineNum">      82 </span><span class="lineNoCov">          0 :                 errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">      83 </span>            :         char *fdstr;
+<span class="lineNum">      84 </span><span class="lineCov">         89 :         if (asprintf(&amp;fdstr, &quot;--fd=%d&quot;, w[id].fd[1]) == -1)</span>
+<span class="lineNum">      85 </span><span class="lineNoCov">          0 :                 errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">      86 </span>            : 
 <span class="lineNum">      87 </span>            : 
-<span class="lineNum">      88 </span>            : 
-<span class="lineNum">      89 </span>            :         // start an fdns resolver process
-<span class="lineNum">      90 </span><span class="lineCov">        104 :         int wcnt = whitelist_cnt();</span>
-<span class="lineNum">      91 </span><span class="lineCov">        104 :         char *a[arg_argc + wcnt + 20];</span>
-<span class="lineNum">      92 </span><span class="lineCov">        104 :         a[0] = PATH_FDNS;</span>
-<span class="lineNum">      93 </span><span class="lineCov">        104 :         a[1] = idstr;</span>
-<span class="lineNum">      94 </span><span class="lineCov">        104 :         a[2] = fdstr;</span>
-<span class="lineNum">      95 </span><span class="lineCov">        104 :         int last = 3;</span>
-<span class="lineNum">      96 </span><span class="lineCov">        104 :         if (arg_debug)</span>
-<span class="lineNum">      97 </span><span class="lineCov">          7 :                 a[last++] = &quot;--debug&quot;;</span>
-<span class="lineNum">      98 </span><span class="lineCov">        104 :         if (arg_nofilter)</span>
-<span class="lineNum">      99 </span><span class="lineCov">          3 :                 a[last++] = &quot;--nofilter&quot;;</span>
-<span class="lineNum">     100 </span><span class="lineCov">        104 :         if (arg_ipv6)</span>
-<span class="lineNum">     101 </span><span class="lineCov">          3 :                 a[last++]  = &quot;--ipv6&quot;;</span>
-<span class="lineNum">     102 </span><span class="lineCov">        104 :         if (arg_proxy_addr) {</span>
-<span class="lineNum">     103 </span>            :                 char *cmd;
-<span class="lineNum">     104 </span><span class="lineCov">         12 :                 if (asprintf(&amp;cmd, &quot;--proxy-addr=%s&quot;, arg_proxy_addr) == -1)</span>
-<span class="lineNum">     105 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     106 </span><span class="lineCov">         12 :                 a[last++] = cmd;</span>
-<span class="lineNum">     107 </span>            :         }
-<span class="lineNum">     108 </span><span class="lineCov">        104 :         if (arg_fallback_only)</span>
-<span class="lineNum">     109 </span><span class="lineCov">          1 :                 a[last++] = &quot;--fallback-only&quot;;</span>
-<span class="lineNum">     110 </span><span class="lineCov">        104 :         if (arg_certfile) {</span>
-<span class="lineNum">     111 </span>            :                 char *cmd;
-<span class="lineNum">     112 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--certfile=%s&quot;, arg_certfile) == -1)</span>
-<span class="lineNum">     113 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     114 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
-<span class="lineNum">     115 </span>            :         }
-<span class="lineNum">     116 </span><span class="lineCov">        104 :         if (arg_proxy_addr_any)</span>
-<span class="lineNum">     117 </span><span class="lineCov">          3 :                 a[last++] = &quot;--proxy-addr-any&quot;;</span>
-<span class="lineNum">     118 </span><span class="lineCov">        104 :         if (arg_server) {</span>
+<span class="lineNum">      88 </span>            :         // start an fdns resolver process
+<span class="lineNum">      89 </span><span class="lineCov">         89 :         int wcnt = whitelist_cnt();</span>
+<span class="lineNum">      90 </span><span class="lineCov">         89 :         int bcnt = blocklist_cnt();</span>
+<span class="lineNum">      91 </span><span class="lineCov">         89 :         char *a[arg_argc + wcnt + bcnt + 20];</span>
+<span class="lineNum">      92 </span><span class="lineCov">         89 :         a[0] = PATH_FDNS;</span>
+<span class="lineNum">      93 </span><span class="lineCov">         89 :         a[1] = idstr;</span>
+<span class="lineNum">      94 </span><span class="lineCov">         89 :         a[2] = fdstr;</span>
+<span class="lineNum">      95 </span><span class="lineCov">         89 :         int last = 3;</span>
+<span class="lineNum">      96 </span><span class="lineCov">         89 :         if (arg_debug)</span>
+<span class="lineNum">      97 </span><span class="lineCov">          4 :                 a[last++] = &quot;--debug&quot;;</span>
+<span class="lineNum">      98 </span><span class="lineCov">         89 :         if (arg_debug_transport)</span>
+<span class="lineNum">      99 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--debug-transport&quot;;</span>
+<span class="lineNum">     100 </span><span class="lineCov">         89 :         if (arg_debug_ssl)</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--debug-ssl&quot;;</span>
+<span class="lineNum">     102 </span><span class="lineCov">         89 :         if (arg_nofilter)</span>
+<span class="lineNum">     103 </span><span class="lineCov">          2 :                 a[last++] = &quot;--nofilter&quot;;</span>
+<span class="lineNum">     104 </span><span class="lineCov">         89 :         if (arg_ipv6)</span>
+<span class="lineNum">     105 </span><span class="lineCov">          2 :                 a[last++]  = &quot;--ipv6&quot;;</span>
+<span class="lineNum">     106 </span><span class="lineCov">         89 :         if (arg_proxy_addr) {</span>
+<span class="lineNum">     107 </span>            :                 char *cmd;
+<span class="lineNum">     108 </span><span class="lineCov">         10 :                 if (asprintf(&amp;cmd, &quot;--proxy-addr=%s&quot;, arg_proxy_addr) == -1)</span>
+<span class="lineNum">     109 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     110 </span><span class="lineCov">         10 :                 a[last++] = cmd;</span>
+<span class="lineNum">     111 </span>            :         }
+<span class="lineNum">     112 </span><span class="lineCov">         89 :         if (arg_allow_self_signed_certs)</span>
+<span class="lineNum">     113 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--allow-self-signed-certs&quot;;</span>
+<span class="lineNum">     114 </span><span class="lineCov">         89 :         if (arg_allow_expired_certs)</span>
+<span class="lineNum">     115 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--allow-expired-certs&quot;;</span>
+<span class="lineNum">     116 </span>            : //      if (arg_fallback_only)
+<span class="lineNum">     117 </span>            : //              a[last++] = &quot;--fallback-only&quot;;
+<span class="lineNum">     118 </span><span class="lineCov">         89 :         if (arg_keepalive) {</span>
 <span class="lineNum">     119 </span>            :                 char *cmd;
-<span class="lineNum">     120 </span><span class="lineCov">        104 :                 if (asprintf(&amp;cmd, &quot;--server=%s&quot;, arg_server) == -1)</span>
+<span class="lineNum">     120 </span><span class="lineCov">          2 :                 if (asprintf(&amp;cmd, &quot;--keepalive=%d&quot;, arg_keepalive) == -1)</span>
 <span class="lineNum">     121 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     122 </span><span class="lineCov">        104 :                 a[last++] = cmd;</span>
+<span class="lineNum">     122 </span><span class="lineCov">          2 :                 a[last++] = cmd;</span>
 <span class="lineNum">     123 </span>            :         }
-<span class="lineNum">     124 </span><span class="lineCov">        104 :         if (arg_allow_all_queries)</span>
-<span class="lineNum">     125 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--allow-all-queries&quot;;</span>
-<span class="lineNum">     126 </span><span class="lineCov">        104 :         if (arg_allow_local_doh)</span>
-<span class="lineNum">     127 </span><span class="lineCov">          3 :                 a[last++] = &quot;--allow-local-doh&quot;;</span>
-<span class="lineNum">     128 </span>            : 
-<span class="lineNum">     129 </span><span class="lineCov">        104 :         if (arg_cache_ttl != CACHE_TTL_DEFAULT) {</span>
-<span class="lineNum">     130 </span>            :                 char *cmd;
-<span class="lineNum">     131 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--cache-ttl=%d&quot;, arg_cache_ttl) == -1)</span>
-<span class="lineNum">     132 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     133 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
-<span class="lineNum">     134 </span>            :         }
-<span class="lineNum">     135 </span>            : 
-<span class="lineNum">     136 </span>            : 
-<span class="lineNum">     137 </span><span class="lineCov">        104 :         Forwarder *f = fwd;</span>
-<span class="lineNum">     138 </span><span class="lineCov">        110 :         while (f) {</span>
+<span class="lineNum">     124 </span><span class="lineCov">         89 :         if (arg_certfile) {</span>
+<span class="lineNum">     125 </span>            :                 char *cmd;
+<span class="lineNum">     126 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--certfile=%s&quot;, arg_certfile) == -1)</span>
+<span class="lineNum">     127 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     128 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
+<span class="lineNum">     129 </span>            :         }
+<span class="lineNum">     130 </span><span class="lineCov">         89 :         if (arg_proxy_addr_any)</span>
+<span class="lineNum">     131 </span><span class="lineCov">          2 :                 a[last++] = &quot;--proxy-addr-any&quot;;</span>
+<span class="lineNum">     132 </span><span class="lineCov">         89 :         if (arg_server) {</span>
+<span class="lineNum">     133 </span>            :                 char *cmd;
+<span class="lineNum">     134 </span><span class="lineCov">         89 :                 if (asprintf(&amp;cmd, &quot;--server=%s&quot;, arg_server) == -1)</span>
+<span class="lineNum">     135 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     136 </span><span class="lineCov">         89 :                 a[last++] = cmd;</span>
+<span class="lineNum">     137 </span>            :         }
+<span class="lineNum">     138 </span><span class="lineCov">         89 :         if (arg_transport) {</span>
 <span class="lineNum">     139 </span>            :                 char *cmd;
-<span class="lineNum">     140 </span><span class="lineCov">          6 :                 if (asprintf(&amp;cmd, &quot;--forwarder=%s@%s&quot;, f-&gt;name, f-&gt;ip) == -1)</span>
+<span class="lineNum">     140 </span><span class="lineCov">          8 :                 if (asprintf(&amp;cmd, &quot;--transport=%s&quot;, arg_transport) == -1)</span>
 <span class="lineNum">     141 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     142 </span><span class="lineCov">          6 :                 a[last++] = cmd;</span>
-<span class="lineNum">     143 </span><span class="lineCov">          6 :                 f = f-&gt;next;</span>
-<span class="lineNum">     144 </span>            :         }
-<span class="lineNum">     145 </span>            : 
-<span class="lineNum">     146 </span><span class="lineCov">        104 :         if (arg_whitelist_file) {</span>
-<span class="lineNum">     147 </span>            :                 char *cmd;
-<span class="lineNum">     148 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--whitelist-file=%s&quot;, arg_whitelist_file) == -1)</span>
-<span class="lineNum">     149 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     150 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
-<span class="lineNum">     151 </span>            :         }
-<span class="lineNum">     152 </span>            : 
-<span class="lineNum">     153 </span><span class="lineCov">        104 :         if (wcnt) {</span>
-<span class="lineNum">     154 </span><span class="lineCov">         12 :                 whitelist_command(a + last);</span>
-<span class="lineNum">     155 </span><span class="lineCov">         12 :                 last += wcnt;</span>
-<span class="lineNum">     156 </span>            :         }
-<span class="lineNum">     157 </span>            : 
-<span class="lineNum">     158 </span><span class="lineCov">        104 :         a[last] = NULL;</span>
-<span class="lineNum">     159 </span><span class="lineCov">        104 :         assert(last &lt; (arg_argc + wcnt + 20));</span>
-<span class="lineNum">     160 </span>            : 
-<span class="lineNum">     161 </span>            :         // add a small 2 seconds sleep before restarting, just in case we are looping
-<span class="lineNum">     162 </span><span class="lineCov">        104 :         sleep(MONITOR_WAIT_TIMER);</span>
-<span class="lineNum">     163 </span><span class="lineCov">        104 :         execv(a[0], a);</span>
-<span class="lineNum">     164 </span><span class="lineCov">        104 :         exit(1);</span>
-<a name="165"><span class="lineNum">     165 </span>            : }</a>
-<span class="lineNum">     166 </span>            : 
-<span class="lineNum">     167 </span><span class="lineCov">        515 : static void start_sandbox(int id) {</span>
-<span class="lineNum">     168 </span><span class="lineCov">        515 :         assert(id &lt; RESOLVERS_CNT_MAX);</span>
-<span class="lineNum">     169 </span><span class="lineCov">        515 :         encrypted[id] = 0;</span>
+<span class="lineNum">     142 </span><span class="lineCov">          8 :                 a[last++] = cmd;</span>
+<span class="lineNum">     143 </span>            :         }
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span><span class="lineCov">         89 :         if (arg_allow_all_queries)</span>
+<span class="lineNum">     146 </span><span class="lineNoCov">          0 :                 a[last++] = &quot;--allow-all-queries&quot;;</span>
+<span class="lineNum">     147 </span><span class="lineCov">         89 :         if (arg_disable_local_doh)</span>
+<span class="lineNum">     148 </span><span class="lineCov">          2 :                 a[last++] = &quot;--disable-local-doh&quot;;</span>
+<span class="lineNum">     149 </span>            : 
+<span class="lineNum">     150 </span><span class="lineCov">         89 :         if (arg_cache_ttl != CACHE_TTL_DEFAULT) {</span>
+<span class="lineNum">     151 </span>            :                 char *cmd;
+<span class="lineNum">     152 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--cache-ttl=%d&quot;, arg_cache_ttl) == -1)</span>
+<span class="lineNum">     153 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     154 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
+<span class="lineNum">     155 </span>            :         }
+<span class="lineNum">     156 </span>            : 
+<span class="lineNum">     157 </span>            :         {
+<span class="lineNum">     158 </span>            :                 char *cmd;
+<span class="lineNum">     159 </span><span class="lineCov">         89 :                 if (asprintf(&amp;cmd, &quot;--qps=%d&quot;, arg_qps) == -1)</span>
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     161 </span><span class="lineCov">         89 :                 a[last++] = cmd;</span>
+<span class="lineNum">     162 </span>            :         }
+<span class="lineNum">     163 </span>            : 
+<span class="lineNum">     164 </span>            :         {
+<span class="lineNum">     165 </span>            :                 char *cmd;
+<span class="lineNum">     166 </span><span class="lineCov">         89 :                 if (asprintf(&amp;cmd, &quot;--fallback-server=%s&quot;, arg_fallback_server) == -1)</span>
+<span class="lineNum">     167 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     168 </span><span class="lineCov">         89 :                 a[last++] = cmd;</span>
+<span class="lineNum">     169 </span>            :         }
 <span class="lineNum">     170 </span>            : 
-<span class="lineNum">     171 </span><span class="lineCov">        515 :         if (w[id].fd[0] == 0) {</span>
-<span class="lineNum">     172 </span><span class="lineCov">        448 :                 if (socketpair(AF_UNIX, SOCK_DGRAM, 0, w[id].fd) &lt; 0)</span>
-<span class="lineNum">     173 </span><span class="lineNoCov">          0 :                         errExit(&quot;socketpair&quot;);</span>
-<span class="lineNum">     174 </span><span class="lineCov">        448 :                 if (arg_debug)</span>
-<span class="lineNum">     175 </span><span class="lineCov">         20 :                         printf(&quot;resolverid %d, sockpair %d, %d\n&quot;, id, w[id].fd[0], w[id].fd[1]);</span>
+<span class="lineNum">     171 </span><span class="lineCov">         89 :         if (arg_unlist) {</span>
+<span class="lineNum">     172 </span>            :                 char *cmd;
+<span class="lineNum">     173 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--unlist=%s&quot;, arg_unlist) == -1)</span>
+<span class="lineNum">     174 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     175 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
 <span class="lineNum">     176 </span>            :         }
 <span class="lineNum">     177 </span>            : 
-<span class="lineNum">     178 </span><span class="lineCov">        515 :         int flags = CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD;</span>
-<span class="lineNum">     179 </span><span class="lineCov">        926 :         w[id].pid = clone(sandbox,</span>
-<span class="lineNum">     180 </span><span class="lineCov">        515 :                           w[id].child_stack + STACK_SIZE,</span>
-<span class="lineNum">     181 </span>            :                           flags,
-<span class="lineNum">     182 </span>            :                           &amp;id);
-<span class="lineNum">     183 </span><span class="lineCov">        411 :         w[id].keepalive = RESOLVER_KEEPALIVE_SHUTDOWN;</span>
-<span class="lineNum">     184 </span><span class="lineCov">        411 :         if (w[id].pid == -1)</span>
-<span class="lineNum">     185 </span><span class="lineNoCov">          0 :                 errExit(&quot;clone&quot;);</span>
-<a name="186"><span class="lineNum">     186 </span><span class="lineCov">        411 : }</span></a>
-<span class="lineNum">     187 </span>            : 
-<span class="lineNum">     188 </span><span class="lineCov">        131 : static void install_signal_handler(void) {</span>
-<span class="lineNum">     189 </span>            :         struct sigaction sga;
-<span class="lineNum">     190 </span>            : 
-<span class="lineNum">     191 </span>            :         // block SIGTERM/SIGHUP while handling SIGINT
-<span class="lineNum">     192 </span><span class="lineCov">        131 :         sigemptyset(&amp;sga.sa_mask);</span>
-<span class="lineNum">     193 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGTERM);</span>
-<span class="lineNum">     194 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGHUP);</span>
-<span class="lineNum">     195 </span><span class="lineCov">        131 :         sga.sa_handler = my_handler;</span>
-<span class="lineNum">     196 </span><span class="lineCov">        131 :         sga.sa_flags = 0;</span>
-<span class="lineNum">     197 </span><span class="lineCov">        131 :         sigaction(SIGINT, &amp;sga, NULL);</span>
-<span class="lineNum">     198 </span>            : 
-<span class="lineNum">     199 </span>            :         // block SIGINT/SIGHUP while handling SIGTERM
-<span class="lineNum">     200 </span><span class="lineCov">        131 :         sigemptyset(&amp;sga.sa_mask);</span>
-<span class="lineNum">     201 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGINT);</span>
-<span class="lineNum">     202 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGHUP);</span>
-<span class="lineNum">     203 </span><span class="lineCov">        131 :         sga.sa_handler = my_handler;</span>
-<span class="lineNum">     204 </span><span class="lineCov">        131 :         sga.sa_flags = 0;</span>
-<span class="lineNum">     205 </span><span class="lineCov">        131 :         sigaction(SIGTERM, &amp;sga, NULL);</span>
-<span class="lineNum">     206 </span>            : 
-<span class="lineNum">     207 </span>            :         // block SIGINT/SIGTERM while handling SIGHUP
-<span class="lineNum">     208 </span><span class="lineCov">        131 :         sigemptyset(&amp;sga.sa_mask);</span>
-<span class="lineNum">     209 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGINT);</span>
-<span class="lineNum">     210 </span><span class="lineCov">        131 :         sigaddset(&amp;sga.sa_mask, SIGTERM);</span>
-<span class="lineNum">     211 </span><span class="lineCov">        131 :         sga.sa_handler = my_handler;</span>
-<span class="lineNum">     212 </span><span class="lineCov">        131 :         sga.sa_flags = 0;</span>
-<span class="lineNum">     213 </span><span class="lineCov">        131 :         sigaction(SIGHUP, &amp;sga, NULL);</span>
-<a name="214"><span class="lineNum">     214 </span><span class="lineCov">        131 : }</span></a>
-<span class="lineNum">     215 </span>            : 
-<span class="lineNum">     216 </span><span class="lineCov">        131 : void frontend(void) {</span>
-<span class="lineNum">     217 </span><span class="lineCov">        131 :         assert(arg_id == -1);</span>
-<span class="lineNum">     218 </span><span class="lineCov">        131 :         assert(arg_resolvers &lt;= RESOLVERS_CNT_MAX &amp;&amp; arg_resolvers &gt;= RESOLVERS_CNT_MIN);</span>
-<span class="lineNum">     219 </span>            : 
-<span class="lineNum">     220 </span><span class="lineCov">        131 :         install_signal_handler();</span>
-<span class="lineNum">     221 </span>            : //      net_local_unix_socket();
-<span class="lineNum">     222 </span>            : 
-<span class="lineNum">     223 </span>            :         // check for different DNS servers running on this address:port
-<span class="lineNum">     224 </span><span class="lineCov">        131 :         char *proxy_addr = (arg_proxy_addr) ? arg_proxy_addr : DEFAULT_PROXY_ADDR;</span>
-<span class="lineNum">     225 </span><span class="lineCov">        131 :         if (arg_proxy_addr_any)</span>
-<span class="lineNum">     226 </span><span class="lineCov">          4 :                 proxy_addr = &quot;0.0.0.0&quot;;</span>
-<span class="lineNum">     227 </span><span class="lineCov">        131 :         int slocal = net_local_dns_socket(0);</span>
-<span class="lineNum">     228 </span><span class="lineCov">        131 :         if (slocal == -1) {</span>
-<span class="lineNum">     229 </span><span class="lineCov">          1 :                 fprintf(stderr, &quot;Error: a different DNS server is already running on %s:53\n&quot;, proxy_addr);</span>
-<span class="lineNum">     230 </span><span class="lineCov">          1 :                 exit(1);</span>
-<span class="lineNum">     231 </span>            :         }
-<span class="lineNum">     232 </span><span class="lineCov">        130 :         close(slocal); // close the socket</span>
-<span class="lineNum">     233 </span><span class="lineCov">        130 :         if (arg_proxy_addr_any)</span>
-<span class="lineNum">     234 </span><span class="lineCov">          4 :                 logprintf(&quot;listening on all available interfaces\n&quot;);</span>
-<span class="lineNum">     235 </span>            :         else
-<span class="lineNum">     236 </span><span class="lineCov">        126 :                 logprintf(&quot;listening on %s\n&quot;, proxy_addr);</span>
-<span class="lineNum">     237 </span>            : 
-<span class="lineNum">     238 </span>            :         // init resolver structures
-<span class="lineNum">     239 </span><span class="lineCov">        130 :         memset(w, 0, sizeof(w));</span>
+<span class="lineNum">     178 </span><span class="lineCov">         89 :         Forwarder *f = fwd_list;</span>
+<span class="lineNum">     179 </span><span class="lineCov">         93 :         while (f) {</span>
+<span class="lineNum">     180 </span>            :                 char *cmd;
+<span class="lineNum">     181 </span><span class="lineCov">          4 :                 if (asprintf(&amp;cmd, &quot;--forwarder=%s@%s&quot;, f-&gt;name, f-&gt;ip) == -1)</span>
+<span class="lineNum">     182 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     183 </span><span class="lineCov">          4 :                 a[last++] = cmd;</span>
+<span class="lineNum">     184 </span><span class="lineCov">          4 :                 f = f-&gt;next;</span>
+<span class="lineNum">     185 </span>            :         }
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span><span class="lineCov">         89 :         if (arg_whitelist_file) {</span>
+<span class="lineNum">     188 </span>            :                 char *cmd;
+<span class="lineNum">     189 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--whitelist-file=%s&quot;, arg_whitelist_file) == -1)</span>
+<span class="lineNum">     190 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
+<span class="lineNum">     192 </span>            :         }
+<span class="lineNum">     193 </span><span class="lineCov">         89 :         if (arg_blocklist_file) {</span>
+<span class="lineNum">     194 </span>            :                 char *cmd;
+<span class="lineNum">     195 </span><span class="lineNoCov">          0 :                 if (asprintf(&amp;cmd, &quot;--blocklist-file=%s&quot;, arg_blocklist_file) == -1)</span>
+<span class="lineNum">     196 </span><span class="lineNoCov">          0 :                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :                 a[last++] = cmd;</span>
+<span class="lineNum">     198 </span>            :         }
+<span class="lineNum">     199 </span>            : 
+<span class="lineNum">     200 </span><span class="lineCov">         89 :         if (wcnt) {</span>
+<span class="lineNum">     201 </span><span class="lineCov">          6 :                 whitelist_command(a + last);</span>
+<span class="lineNum">     202 </span><span class="lineCov">          6 :                 last += wcnt;</span>
+<span class="lineNum">     203 </span>            :         }
+<span class="lineNum">     204 </span><span class="lineCov">         89 :         if (bcnt) {</span>
+<span class="lineNum">     205 </span><span class="lineCov">          4 :                 blocklist_command(a + last);</span>
+<span class="lineNum">     206 </span><span class="lineCov">          4 :                 last += bcnt;</span>
+<span class="lineNum">     207 </span>            :         }
+<span class="lineNum">     208 </span>            : 
+<span class="lineNum">     209 </span><span class="lineCov">         89 :         a[last] = NULL;</span>
+<span class="lineNum">     210 </span><span class="lineCov">         89 :         assert(last &lt; (arg_argc + wcnt + bcnt + 20));</span>
+<span class="lineNum">     211 </span>            : 
+<span class="lineNum">     212 </span>            :         // add a small 2 seconds sleep before restarting, just in case we are looping
+<span class="lineNum">     213 </span><span class="lineCov">         89 :         fflush(0);</span>
+<span class="lineNum">     214 </span><span class="lineCov">         89 :         sleep(MONITOR_WAIT_TIMER);</span>
+<span class="lineNum">     215 </span><span class="lineCov">         89 :         execv(a[0], a);</span>
+<span class="lineNum">     216 </span><span class="lineCov">         89 :         exit(1);</span>
+<a name="217"><span class="lineNum">     217 </span>            : }</a>
+<span class="lineNum">     218 </span>            : 
+<span class="lineNum">     219 </span><span class="lineCov">        442 : static void start_sandbox(int id) {</span>
+<span class="lineNum">     220 </span><span class="lineCov">        442 :         assert(id &lt; RESOLVERS_CNT_MAX);</span>
+<span class="lineNum">     221 </span><span class="lineCov">        442 :         stats.encrypted[id] = 0;</span>
+<span class="lineNum">     222 </span><span class="lineCov">        442 :         stats.peer_ip[id] = 0;</span>
+<span class="lineNum">     223 </span>            : 
+<span class="lineNum">     224 </span><span class="lineCov">        442 :         if (w[id].fd[0] == 0) {</span>
+<span class="lineNum">     225 </span><span class="lineCov">        375 :                 if (socketpair(AF_UNIX, SOCK_DGRAM, 0, w[id].fd) &lt; 0)</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :                         errExit(&quot;socketpair&quot;);</span>
+<span class="lineNum">     227 </span><span class="lineCov">        375 :                 if (arg_debug)</span>
+<span class="lineNum">     228 </span><span class="lineCov">         10 :                         printf(&quot;resolverid %d, sockpair %d, %d\n&quot;, id, w[id].fd[0], w[id].fd[1]);</span>
+<span class="lineNum">     229 </span>            :         }
+<span class="lineNum">     230 </span>            : 
+<span class="lineNum">     231 </span><span class="lineCov">        442 :         int flags = CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD;</span>
+<span class="lineNum">     232 </span><span class="lineCov">        795 :         w[id].pid = clone(sandbox,</span>
+<span class="lineNum">     233 </span><span class="lineCov">        442 :                           w[id].child_stack + STACK_SIZE,</span>
+<span class="lineNum">     234 </span>            :                           flags,
+<span class="lineNum">     235 </span>            :                           &amp;id);
+<span class="lineNum">     236 </span><span class="lineCov">        353 :         w[id].keepalive = RESOLVER_KEEPALIVE_SHUTDOWN;</span>
+<span class="lineNum">     237 </span><span class="lineCov">        353 :         if (w[id].pid == -1)</span>
+<span class="lineNum">     238 </span><span class="lineNoCov">          0 :                 errExit(&quot;clone&quot;);</span>
+<a name="239"><span class="lineNum">     239 </span><span class="lineCov">        353 : }</span></a>
 <span class="lineNum">     240 </span>            : 
-<span class="lineNum">     241 </span>            :         // create the process file in /run/fdns directory
-<span class="lineNum">     242 </span><span class="lineCov">        130 :         procs_add();</span>
+<span class="lineNum">     241 </span><span class="lineCov">        120 : static void install_signal_handler(void) {</span>
+<span class="lineNum">     242 </span>            :         struct sigaction sga;
 <span class="lineNum">     243 </span>            : 
-<span class="lineNum">     244 </span>            :         // enable /dev/shm/fdns-stats - create the file if it doesn't exist
-<span class="lineNum">     245 </span><span class="lineCov">        130 :         shmem_open(1, proxy_addr);</span>
-<span class="lineNum">     246 </span><span class="lineCov">        130 :         int shm_keepalive_cnt = 0;</span>
-<span class="lineNum">     247 </span>            : 
-<span class="lineNum">     248 </span>            :         // start resolvers
-<span class="lineNum">     249 </span>            :         int i;
-<span class="lineNum">     250 </span><span class="lineCov">        485 :         for (i = 0; i &lt; arg_resolvers; i++)</span>
-<span class="lineNum">     251 </span><span class="lineCov">        448 :                 start_sandbox(i);</span>
-<span class="lineNum">     252 </span>            : 
-<span class="lineNum">     253 </span>            :         // handle SIGCHLD in pselect loop
-<span class="lineNum">     254 </span>            :         sigset_t sigmask, empty_mask;
-<span class="lineNum">     255 </span>            :         struct sigaction sa;
-<span class="lineNum">     256 </span>            : 
-<span class="lineNum">     257 </span><span class="lineCov">         37 :         sigemptyset(&amp;sigmask);</span>
-<span class="lineNum">     258 </span><span class="lineCov">         37 :         sigaddset(&amp;sigmask, SIGCHLD);</span>
-<span class="lineNum">     259 </span><span class="lineCov">         37 :         if (sigprocmask(SIG_BLOCK, &amp;sigmask, NULL) == -1)</span>
-<span class="lineNum">     260 </span><span class="lineNoCov">          0 :                 errExit(&quot;sigprocmask&quot;);</span>
-<span class="lineNum">     261 </span>            : 
-<span class="lineNum">     262 </span><span class="lineCov">         37 :         sa.sa_flags = 0;</span>
-<span class="lineNum">     263 </span><span class="lineCov">         37 :         sa.sa_handler = child_sig_handler;</span>
-<span class="lineNum">     264 </span><span class="lineCov">         37 :         sigemptyset(&amp;sa.sa_mask);</span>
-<span class="lineNum">     265 </span><span class="lineCov">         37 :         if (sigaction(SIGCHLD, &amp;sa, NULL) == -1)</span>
-<span class="lineNum">     266 </span><span class="lineNoCov">          0 :                 errExit(&quot;sigaction&quot;);</span>
-<span class="lineNum">     267 </span>            : 
-<span class="lineNum">     268 </span><span class="lineCov">         37 :         sigemptyset(&amp;empty_mask);</span>
-<span class="lineNum">     269 </span>            : 
-<span class="lineNum">     270 </span><span class="lineCov">         37 :         struct timespec t = { 1, 0};    // one second timeout</span>
-<span class="lineNum">     271 </span><span class="lineCov">         37 :         time_t timestamp = time(NULL);  // detect the computer going to sleep in order to reinitialize SSL connections</span>
-<span class="lineNum">     272 </span><span class="lineCov">         37 :         int send_keepalive_cnt = 0;</span>
-<span class="lineNum">     273 </span><span class="lineCov">        828 :         while (1) {</span>
-<span class="lineNum">     274 </span>            :                 fd_set rset;
-<span class="lineNum">     275 </span><span class="lineCov">        865 :                 FD_ZERO(&amp;rset);</span>
-<span class="lineNum">     276 </span><span class="lineCov">        865 :                 int fdmax = 0;</span>
-<span class="lineNum">     277 </span><span class="lineCov">       6947 :                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     278 </span><span class="lineCov">       6082 :                         FD_SET(w[i].fd[0], &amp;rset);</span>
-<span class="lineNum">     279 </span><span class="lineCov">       6082 :                         fdmax = (fdmax &lt; w[i].fd[0]) ? w[i].fd[0] : fdmax;</span>
-<span class="lineNum">     280 </span>            :                 }
-<span class="lineNum">     281 </span><span class="lineCov">        865 :                 fdmax++;</span>
-<span class="lineNum">     282 </span>            : 
-<span class="lineNum">     283 </span><span class="lineCov">        865 :                 int rv = pselect(fdmax, &amp;rset, NULL, NULL, &amp;t, &amp;empty_mask);</span>
-<span class="lineNum">     284 </span><span class="lineCov">        839 :                 if (rv == -1) {</span>
-<span class="lineNum">     285 </span><span class="lineCov">         35 :                         if (errno == EINTR) {</span>
-<span class="lineNum">     286 </span>            :                                 // select() man page reads:
-<span class="lineNum">     287 </span>            :                                 // &quot;... the sets and  timeout become undefined, so
-<span class="lineNum">     288 </span>            :                                 // do not rely on their contents after an error. &quot;
-<span class="lineNum">     289 </span><span class="lineCov">         35 :                                 t.tv_sec = 1;</span>
-<span class="lineNum">     290 </span><span class="lineCov">         35 :                                 t.tv_nsec = 0;</span>
-<span class="lineNum">     291 </span><span class="lineCov">         35 :                                 continue;</span>
-<span class="lineNum">     292 </span>            :                         }
-<span class="lineNum">     293 </span><span class="lineNoCov">          0 :                         printf(&quot;***\n&quot;);</span>
-<span class="lineNum">     294 </span>            :                 }
-<span class="lineNum">     295 </span><span class="lineCov">        804 :                 else if (rv == 0) {</span>
-<span class="lineNum">     296 </span><span class="lineCov">        477 :                         time_t ts = time(NULL);</span>
-<span class="lineNum">     297 </span>            :                         int i;
-<span class="lineNum">     298 </span>            : 
-<span class="lineNum">     299 </span>            :                         // decrease keepalive wait when coming out of sleep/hibernation
-<span class="lineNum">     300 </span><span class="lineCov">        477 :                         if (ts - timestamp &gt; OUT_OF_SLEEP) {</span>
-<span class="lineNum">     301 </span><span class="lineNoCov">          0 :                                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     302 </span><span class="lineNoCov">          0 :                                         if (w[i].keepalive &gt; RESOLVER_KEEPALIVE_AFTER_SLEEP)</span>
-<span class="lineNum">     303 </span><span class="lineNoCov">          0 :                                                 w[i].keepalive = RESOLVER_KEEPALIVE_AFTER_SLEEP;</span>
-<span class="lineNum">     304 </span>            :                                 }
-<span class="lineNum">     305 </span>            :                         }
-<span class="lineNum">     306 </span>            : 
-<span class="lineNum">     307 </span>            :                         // restart resolvers if the keepalive time expired
-<span class="lineNum">     308 </span><span class="lineCov">       4196 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     309 </span><span class="lineCov">       3729 :                                 if (--w[i].keepalive &lt;= 0) {</span>
-<span class="lineNum">     310 </span><span class="lineCov">         65 :                                         logprintf(&quot;Restarting resolver process %d (pid %d)\n&quot;, i, w[i].pid);</span>
-<span class="lineNum">     311 </span><span class="lineCov">         65 :                                         kill(w[i].pid, SIGKILL);</span>
-<span class="lineNum">     312 </span>            :                                         int status;
-<span class="lineNum">     313 </span><span class="lineCov">         65 :                                         waitpid(w[i].pid, &amp;status, 0);</span>
-<span class="lineNum">     314 </span><span class="lineCov">         65 :                                         start_sandbox(i);</span>
-<span class="lineNum">     315 </span>            :                                 }
-<span class="lineNum">     316 </span>            :                         }
-<span class="lineNum">     317 </span>            : 
-<span class="lineNum">     318 </span>            :                         // send a shared memory keepalive
-<span class="lineNum">     319 </span><span class="lineCov">        467 :                         if (++shm_keepalive_cnt &gt; SHMEM_KEEPALIVE) {</span>
-<span class="lineNum">     320 </span><span class="lineCov">        103 :                                 shmem_keepalive();</span>
-<span class="lineNum">     321 </span><span class="lineCov">        103 :                                 shm_keepalive_cnt = 0;</span>
-<span class="lineNum">     322 </span>            :                         }
-<span class="lineNum">     323 </span>            : 
-<span class="lineNum">     324 </span><span class="lineCov">        467 :                         if (++send_keepalive_cnt &gt;= RESOLVER_KEEPALIVE_TIMER) {</span>
-<span class="lineNum">     325 </span><span class="lineCov">         26 :                                 send_keepalive_cnt = 0;</span>
-<span class="lineNum">     326 </span><span class="lineCov">        265 :                                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     327 </span><span class="lineCov">        239 :                                         int rv = write(w[i].fd[0], &quot;keepalive&quot;, 10);</span>
-<span class="lineNum">     328 </span>            :                                         (void) rv; // todo: error recovery
-<span class="lineNum">     329 </span>            :                                 }
-<span class="lineNum">     330 </span>            :                         }
-<span class="lineNum">     331 </span>            : 
-<span class="lineNum">     332 </span><span class="lineCov">        467 :                         t.tv_sec = 1;</span>
-<span class="lineNum">     333 </span><span class="lineCov">        467 :                         t.tv_nsec = 0;</span>
-<span class="lineNum">     334 </span><span class="lineCov">        467 :                         timestamp = time(NULL);</span>
-<span class="lineNum">     335 </span>            :                 }
-<span class="lineNum">     336 </span><span class="lineCov">        327 :                 else if (got_SIGCHLD) {</span>
-<span class="lineNum">     337 </span><span class="lineCov">          3 :                         pid_t pid = -1;;</span>
-<span class="lineNum">     338 </span>            :                         int status;
-<span class="lineNum">     339 </span><span class="lineCov">          3 :                         got_SIGCHLD = 0;</span>
-<span class="lineNum">     340 </span>            : 
-<span class="lineNum">     341 </span>            :                         // find a dead resolver
-<span class="lineNum">     342 </span>            :                         int i;
-<span class="lineNum">     343 </span><span class="lineCov">         16 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     344 </span><span class="lineCov">         14 :                                 pid = waitpid(w[i].pid, &amp;status, WNOHANG);</span>
-<span class="lineNum">     345 </span><span class="lineCov">         14 :                                 if (pid == w[i].pid) {</span>
-<span class="lineNum">     346 </span><span class="lineCov">          2 :                                         logprintf(&quot;Error: resolver %d (pid %u) terminated, restarting it...\n&quot;, i, pid);</span>
-<span class="lineNum">     347 </span><span class="lineCov">          2 :                                         kill(pid, SIGTERM); // just in case</span>
-<span class="lineNum">     348 </span><span class="lineCov">          2 :                                         start_sandbox(i);</span>
-<span class="lineNum">     349 </span>            :                                 }
-<span class="lineNum">     350 </span>            :                         }
+<span class="lineNum">     244 </span>            :         // block SIGTERM/SIGHUP while handling SIGINT
+<span class="lineNum">     245 </span><span class="lineCov">        120 :         sigemptyset(&amp;sga.sa_mask);</span>
+<span class="lineNum">     246 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGTERM);</span>
+<span class="lineNum">     247 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGHUP);</span>
+<span class="lineNum">     248 </span><span class="lineCov">        120 :         sga.sa_handler = my_handler;</span>
+<span class="lineNum">     249 </span><span class="lineCov">        120 :         sga.sa_flags = 0;</span>
+<span class="lineNum">     250 </span><span class="lineCov">        120 :         sigaction(SIGINT, &amp;sga, NULL);</span>
+<span class="lineNum">     251 </span>            : 
+<span class="lineNum">     252 </span>            :         // block SIGINT/SIGHUP while handling SIGTERM
+<span class="lineNum">     253 </span><span class="lineCov">        120 :         sigemptyset(&amp;sga.sa_mask);</span>
+<span class="lineNum">     254 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGINT);</span>
+<span class="lineNum">     255 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGHUP);</span>
+<span class="lineNum">     256 </span><span class="lineCov">        120 :         sga.sa_handler = my_handler;</span>
+<span class="lineNum">     257 </span><span class="lineCov">        120 :         sga.sa_flags = 0;</span>
+<span class="lineNum">     258 </span><span class="lineCov">        120 :         sigaction(SIGTERM, &amp;sga, NULL);</span>
+<span class="lineNum">     259 </span>            : 
+<span class="lineNum">     260 </span>            :         // block SIGINT/SIGTERM while handling SIGHUP
+<span class="lineNum">     261 </span><span class="lineCov">        120 :         sigemptyset(&amp;sga.sa_mask);</span>
+<span class="lineNum">     262 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGINT);</span>
+<span class="lineNum">     263 </span><span class="lineCov">        120 :         sigaddset(&amp;sga.sa_mask, SIGTERM);</span>
+<span class="lineNum">     264 </span><span class="lineCov">        120 :         sga.sa_handler = my_handler;</span>
+<span class="lineNum">     265 </span><span class="lineCov">        120 :         sga.sa_flags = 0;</span>
+<span class="lineNum">     266 </span><span class="lineCov">        120 :         sigaction(SIGHUP, &amp;sga, NULL);</span>
+<a name="267"><span class="lineNum">     267 </span><span class="lineCov">        120 : }</span></a>
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">        120 : void frontend(void) {</span>
+<span class="lineNum">     270 </span><span class="lineCov">        120 :         assert(arg_id == -1);</span>
+<span class="lineNum">     271 </span><span class="lineCov">        120 :         assert(arg_resolvers &lt;= RESOLVERS_CNT_MAX &amp;&amp; arg_resolvers &gt;= RESOLVERS_CNT_MIN);</span>
+<span class="lineNum">     272 </span>            : 
+<span class="lineNum">     273 </span><span class="lineCov">        120 :         install_signal_handler();</span>
+<span class="lineNum">     274 </span>            : //      net_local_unix_socket();
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span>            :         // check for different DNS servers running on this address:port
+<span class="lineNum">     277 </span><span class="lineCov">        120 :         char *proxy_addr = (arg_proxy_addr) ? arg_proxy_addr : DEFAULT_PROXY_ADDR;</span>
+<span class="lineNum">     278 </span><span class="lineCov">        120 :         if (arg_proxy_addr_any)</span>
+<span class="lineNum">     279 </span><span class="lineCov">          3 :                 proxy_addr = &quot;0.0.0.0&quot;;</span>
+<span class="lineNum">     280 </span><span class="lineCov">        120 :         int slocal = net_local_dns_socket(0);</span>
+<span class="lineNum">     281 </span><span class="lineCov">        120 :         if (slocal == -1) {</span>
+<span class="lineNum">     282 </span><span class="lineCov">          1 :                 fprintf(stderr, &quot;Error: a different DNS server is already running on %s:53\n&quot;, proxy_addr);</span>
+<span class="lineNum">     283 </span><span class="lineCov">          1 :                 exit(1);</span>
+<span class="lineNum">     284 </span>            :         }
+<span class="lineNum">     285 </span><span class="lineCov">        119 :         close(slocal); // close the socket</span>
+<span class="lineNum">     286 </span><span class="lineCov">        119 :         if (arg_proxy_addr_any)</span>
+<span class="lineNum">     287 </span><span class="lineCov">          3 :                 logprintf(&quot;listening on all available interfaces\n&quot;);</span>
+<span class="lineNum">     288 </span>            :         else
+<span class="lineNum">     289 </span><span class="lineCov">        116 :                 logprintf(&quot;listening on %s\n&quot;, proxy_addr);</span>
+<span class="lineNum">     290 </span>            : 
+<span class="lineNum">     291 </span>            :         // init resolver structures
+<span class="lineNum">     292 </span><span class="lineCov">        119 :         memset(w, 0, sizeof(w));</span>
+<span class="lineNum">     293 </span>            : 
+<span class="lineNum">     294 </span>            :         // create the process file in /run/fdns directory
+<span class="lineNum">     295 </span><span class="lineCov">        119 :         procs_add();</span>
+<span class="lineNum">     296 </span>            : 
+<span class="lineNum">     297 </span>            :         // enable /dev/shm/fdns-stats - create the file if it doesn't exist
+<span class="lineNum">     298 </span><span class="lineCov">        119 :         shmem_open(1, proxy_addr);</span>
+<span class="lineNum">     299 </span><span class="lineCov">        119 :         int shm_keepalive_cnt = 0;</span>
+<span class="lineNum">     300 </span>            : 
+<span class="lineNum">     301 </span>            :         // start resolvers
+<span class="lineNum">     302 </span>            :         int i;
+<span class="lineNum">     303 </span><span class="lineCov">        416 :         for (i = 0; i &lt; arg_resolvers; i++)</span>
+<span class="lineNum">     304 </span><span class="lineCov">        375 :                 start_sandbox(i);</span>
+<span class="lineNum">     305 </span>            : 
+<span class="lineNum">     306 </span>            :         // handle SIGCHLD in pselect loop
+<span class="lineNum">     307 </span>            :         sigset_t sigmask, empty_mask;
+<span class="lineNum">     308 </span>            :         struct sigaction sa;
+<span class="lineNum">     309 </span>            : 
+<span class="lineNum">     310 </span><span class="lineCov">         41 :         sigemptyset(&amp;sigmask);</span>
+<span class="lineNum">     311 </span><span class="lineCov">         41 :         sigaddset(&amp;sigmask, SIGCHLD);</span>
+<span class="lineNum">     312 </span><span class="lineCov">         41 :         if (sigprocmask(SIG_BLOCK, &amp;sigmask, NULL) == -1)</span>
+<span class="lineNum">     313 </span><span class="lineNoCov">          0 :                 errExit(&quot;sigprocmask&quot;);</span>
+<span class="lineNum">     314 </span>            : 
+<span class="lineNum">     315 </span><span class="lineCov">         41 :         sa.sa_flags = 0;</span>
+<span class="lineNum">     316 </span><span class="lineCov">         41 :         sa.sa_handler = child_sig_handler;</span>
+<span class="lineNum">     317 </span><span class="lineCov">         41 :         sigemptyset(&amp;sa.sa_mask);</span>
+<span class="lineNum">     318 </span><span class="lineCov">         41 :         if (sigaction(SIGCHLD, &amp;sa, NULL) == -1)</span>
+<span class="lineNum">     319 </span><span class="lineNoCov">          0 :                 errExit(&quot;sigaction&quot;);</span>
+<span class="lineNum">     320 </span>            : 
+<span class="lineNum">     321 </span><span class="lineCov">         41 :         sigemptyset(&amp;empty_mask);</span>
+<span class="lineNum">     322 </span>            : 
+<span class="lineNum">     323 </span>            :         // server
+<span class="lineNum">     324 </span><span class="lineCov">         41 :         DnsServer *srv = server_get();</span>
+<span class="lineNum">     325 </span><span class="lineCov">         41 :         assert(srv);</span>
+<span class="lineNum">     326 </span>            : 
+<span class="lineNum">     327 </span><span class="lineCov">         41 :         struct timespec t = { 1, 0};    // one second timeout</span>
+<span class="lineNum">     328 </span><span class="lineCov">         41 :         time_t timestamp = time(NULL);  // detect the computer going to sleep in order to reinitialize SSL connections</span>
+<span class="lineNum">     329 </span><span class="lineCov">         41 :         int send_keepalive_cnt = 0;</span>
+<span class="lineNum">     330 </span><span class="lineCov">       1186 :         while (1) {</span>
+<span class="lineNum">     331 </span>            :                 fd_set rset;
+<span class="lineNum">     332 </span><span class="lineCov">       1227 :                 FD_ZERO(&amp;rset);</span>
+<span class="lineNum">     333 </span><span class="lineCov">       1227 :                 int fdmax = 0;</span>
+<span class="lineNum">     334 </span><span class="lineCov">       9065 :                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     335 </span><span class="lineCov">       7838 :                         FD_SET(w[i].fd[0], &amp;rset);</span>
+<span class="lineNum">     336 </span><span class="lineCov">       7838 :                         fdmax = (fdmax &lt; w[i].fd[0]) ? w[i].fd[0] : fdmax;</span>
+<span class="lineNum">     337 </span>            :                 }
+<span class="lineNum">     338 </span><span class="lineCov">       1227 :                 fdmax++;</span>
+<span class="lineNum">     339 </span>            : 
+<span class="lineNum">     340 </span><span class="lineCov">       1227 :                 int rv = pselect(fdmax, &amp;rset, NULL, NULL, &amp;t, &amp;empty_mask);</span>
+<span class="lineNum">     341 </span><span class="lineCov">       1197 :                 if (rv == -1) {</span>
+<span class="lineNum">     342 </span><span class="lineCov">         57 :                         if (errno == EINTR) {</span>
+<span class="lineNum">     343 </span>            :                                 // select() man page reads:
+<span class="lineNum">     344 </span>            :                                 // &quot;... the sets and  timeout become undefined, so
+<span class="lineNum">     345 </span>            :                                 // do not rely on their contents after an error. &quot;
+<span class="lineNum">     346 </span><span class="lineCov">         57 :                                 t.tv_sec = 1;</span>
+<span class="lineNum">     347 </span><span class="lineCov">         57 :                                 t.tv_nsec = 0;</span>
+<span class="lineNum">     348 </span><span class="lineCov">         57 :                                 continue;</span>
+<span class="lineNum">     349 </span>            :                         }
+<span class="lineNum">     350 </span><span class="lineNoCov">          0 :                         printf(&quot;***\n&quot;);</span>
 <span class="lineNum">     351 </span>            :                 }
-<span class="lineNum">     352 </span>            :                 else {
-<span class="lineNum">     353 </span><span class="lineCov">       2190 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
-<span class="lineNum">     354 </span><span class="lineCov">       1866 :                                 if (FD_ISSET(w[i].fd[0], &amp;rset)) {</span>
-<span class="lineNum">     355 </span>            :                                         LogMsg msg;
-<span class="lineNum">     356 </span><span class="lineCov">        325 :                                         ssize_t len = read(w[i].fd[0], &amp;msg, sizeof(LogMsg));</span>
-<span class="lineNum">     357 </span><span class="lineCov">        325 :                                         if (len == -1) // todo: parse EINTR</span>
-<span class="lineNum">     358 </span><span class="lineNoCov">          0 :                                                 errExit(&quot;read&quot;);</span>
-<span class="lineNum">     359 </span>            : 
-<span class="lineNum">     360 </span>            :                                         // check length
-<span class="lineNum">     361 </span><span class="lineCov">        325 :                                         if (len != msg.h.len) {</span>
-<span class="lineNum">     362 </span><span class="lineNoCov">          0 :                                                 logprintf(&quot;Error: log message with an invalid length\n&quot;);</span>
-<span class="lineNum">     363 </span><span class="lineNoCov">          0 :                                                 continue;</span>
-<span class="lineNum">     364 </span>            :                                         }
-<span class="lineNum">     365 </span>            : 
-<span class="lineNum">     366 </span>            :                                         // parse the incoming message
-<span class="lineNum">     367 </span><span class="lineCov">        325 :                                         msg.buf[len - sizeof(LogMsgHeader)] = '\0';</span>
-<span class="lineNum">     368 </span>            : 
-<span class="lineNum">     369 </span>            :                                         // parse incoming message
-<span class="lineNum">     370 </span><span class="lineCov">        325 :                                         if (strncmp(msg.buf, &quot;Stats: &quot;, 7) == 0) {</span>
-<span class="lineNum">     371 </span>            :                                                 Stats s;
-<span class="lineNum">     372 </span><span class="lineCov">         22 :                                                 sscanf(msg.buf, &quot;Stats: rx %u, dropped %u, fallback %u, cached %u, fwd %u, %lf&quot;,</span>
-<span class="lineNum">     373 </span>            :                                                        &amp;s.rx,
-<span class="lineNum">     374 </span>            :                                                        &amp;s.drop,
-<span class="lineNum">     375 </span>            :                                                        &amp;s.fallback,
-<span class="lineNum">     376 </span>            :                                                        &amp;s.cached,
-<span class="lineNum">     377 </span>            :                                                        &amp;s.fwd,
-<span class="lineNum">     378 </span>            :                                                        &amp;s.ssl_pkts_timetrace);
-<span class="lineNum">     379 </span>            : 
-<span class="lineNum">     380 </span>            :                                                 // calculate global stats
-<span class="lineNum">     381 </span><span class="lineCov">         22 :                                                 stats.rx += s.rx;</span>
-<span class="lineNum">     382 </span><span class="lineCov">         22 :                                                 stats.drop += s.drop;</span>
-<span class="lineNum">     383 </span><span class="lineCov">         22 :                                                 stats.fallback += s.fallback;</span>
-<span class="lineNum">     384 </span><span class="lineCov">         22 :                                                 stats.cached += s.cached;</span>
-<span class="lineNum">     385 </span><span class="lineCov">         22 :                                                 stats.fwd += s.fwd;</span>
-<span class="lineNum">     386 </span><span class="lineCov">         22 :                                                 if (s.ssl_pkts_timetrace) {</span>
-<span class="lineNum">     387 </span><span class="lineCov">         12 :                                                         stats.ssl_pkts_timetrace += s.ssl_pkts_timetrace;</span>
-<span class="lineNum">     388 </span><span class="lineCov">         12 :                                                         stats.ssl_pkts_timetrace /= 2;</span>
-<span class="lineNum">     389 </span>            :                                                 }
-<span class="lineNum">     390 </span>            : 
-<span class="lineNum">     391 </span><span class="lineCov">         22 :                                                 shmem_store_stats(proxy_addr);</span>
-<span class="lineNum">     392 </span>            :                                         }
-<span class="lineNum">     393 </span><span class="lineCov">        303 :                                         else if (strncmp(msg.buf, &quot;Request: &quot;, 9) == 0) {</span>
-<span class="lineNum">     394 </span><span class="lineCov">         46 :                                                 printf(&quot;%s&quot;, msg.buf + 9);</span>
-<span class="lineNum">     395 </span><span class="lineCov">         46 :                                                 shmem_store_log(msg.buf + 9);</span>
-<span class="lineNum">     396 </span>            :                                         }
-<span class="lineNum">     397 </span><span class="lineCov">        257 :                                         else if (strncmp(msg.buf, &quot;resolver keepalive&quot;, 16) == 0)</span>
-<span class="lineNum">     398 </span><span class="lineCov">         52 :                                                 w[i].keepalive = RESOLVER_KEEPALIVE_SHUTDOWN;</span>
-<span class="lineNum">     399 </span>            :                                         else {
-<span class="lineNum">     400 </span><span class="lineCov">        205 :                                                 if (strncmp(msg.buf, &quot;SSL connection opened&quot;, 21) == 0) {</span>
-<span class="lineNum">     401 </span><span class="lineCov">        203 :                                                         encrypted[i] = 1;</span>
-<span class="lineNum">     402 </span><span class="lineCov">        203 :                                                         shmem_store_stats(proxy_addr);</span>
-<span class="lineNum">     403 </span>            :                                                 }
-<span class="lineNum">     404 </span><span class="lineCov">          2 :                                                 else if (strncmp(msg.buf, &quot;SSL connection closed&quot;, 21) == 0) {</span>
-<span class="lineNum">     405 </span><span class="lineNoCov">          0 :                                                         encrypted[i] = 0;;</span>
-<span class="lineNum">     406 </span><span class="lineNoCov">          0 :                                                         shmem_store_stats(proxy_addr);</span>
-<span class="lineNum">     407 </span>            :                                                 }
-<span class="lineNum">     408 </span>            : 
-<span class="lineNum">     409 </span>            :                                                 char *tmp;
-<span class="lineNum">     410 </span><span class="lineCov">        205 :                                                 if (asprintf(&amp;tmp, &quot;(%d) %s&quot;, i, msg.buf) == -1)</span>
-<span class="lineNum">     411 </span><span class="lineNoCov">          0 :                                                         errExit(&quot;asprintf&quot;);</span>
-<span class="lineNum">     412 </span><span class="lineCov">        205 :                                                 logprintf(&quot;%s&quot;, tmp);</span>
-<span class="lineNum">     413 </span><span class="lineCov">        205 :                                                 shmem_store_log(tmp);</span>
-<span class="lineNum">     414 </span><span class="lineCov">        205 :                                                 free(tmp);</span>
-<span class="lineNum">     415 </span>            :                                         }
-<span class="lineNum">     416 </span>            : 
-<span class="lineNum">     417 </span>            :                                         // respond with a keepalive
-<span class="lineNum">     418 </span><span class="lineCov">        325 :                                         int rv = write(w[i].fd[0], &quot;keepalive&quot;, 10);</span>
-<span class="lineNum">     419 </span>            :                                         (void) rv; // todo: error recovery
-<span class="lineNum">     420 </span>            : 
-<span class="lineNum">     421 </span><span class="lineCov">        325 :                                         fflush(0);</span>
-<span class="lineNum">     422 </span>            :                                 }
-<span class="lineNum">     423 </span>            :                         }
-<span class="lineNum">     424 </span>            :                 }
-<span class="lineNum">     425 </span><span class="lineCov">        793 :                 fflush(0);</span>
-<span class="lineNum">     426 </span>            :         }
-<span class="lineNum">     427 </span>            : }
+<span class="lineNum">     352 </span><span class="lineCov">       1140 :                 else if (rv == 0) {</span>
+<span class="lineNum">     353 </span><span class="lineCov">        590 :                         time_t ts = time(NULL);</span>
+<span class="lineNum">     354 </span>            :                         int i;
+<span class="lineNum">     355 </span>            : 
+<span class="lineNum">     356 </span>            :                         // clean shared memory logs
+<span class="lineNum">     357 </span><span class="lineCov">        590 :                         shm_timeout();</span>
+<span class="lineNum">     358 </span>            : 
+<span class="lineNum">     359 </span>            :                         // decrease keepalive wait when coming out of sleep/hibernation
+<span class="lineNum">     360 </span><span class="lineCov">        590 :                         if (ts - timestamp &gt; OUT_OF_SLEEP) {</span>
+<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     362 </span><span class="lineNoCov">          0 :                                         if (w[i].keepalive &gt; RESOLVER_KEEPALIVE_AFTER_SLEEP)</span>
+<span class="lineNum">     363 </span><span class="lineNoCov">          0 :                                                 w[i].keepalive = RESOLVER_KEEPALIVE_AFTER_SLEEP;</span>
+<span class="lineNum">     364 </span>            :                                 }
+<span class="lineNum">     365 </span>            :                         }
+<span class="lineNum">     366 </span>            : 
+<span class="lineNum">     367 </span>            :                         // restart resolvers if the keepalive time expired
+<span class="lineNum">     368 </span><span class="lineCov">       4467 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     369 </span><span class="lineCov">       3887 :                                 if (--w[i].keepalive &lt;= 0) {</span>
+<span class="lineNum">     370 </span><span class="lineCov">         65 :                                         logprintf(&quot;Restarting resolver process %d (pid %d)\n&quot;, i, w[i].pid);</span>
+<span class="lineNum">     371 </span><span class="lineCov">         65 :                                         kill(w[i].pid, SIGKILL);</span>
+<span class="lineNum">     372 </span>            :                                         int status;
+<span class="lineNum">     373 </span><span class="lineCov">         65 :                                         waitpid(w[i].pid, &amp;status, 0);</span>
+<span class="lineNum">     374 </span><span class="lineCov">         65 :                                         start_sandbox(i);</span>
+<span class="lineNum">     375 </span>            :                                 }
+<span class="lineNum">     376 </span>            :                         }
+<span class="lineNum">     377 </span>            : 
+<span class="lineNum">     378 </span>            :                         // send a shared memory keepalive
+<span class="lineNum">     379 </span><span class="lineCov">        580 :                         if (++shm_keepalive_cnt &gt; SHMEM_KEEPALIVE) {</span>
+<span class="lineNum">     380 </span><span class="lineCov">        131 :                                 shmem_keepalive();</span>
+<span class="lineNum">     381 </span><span class="lineCov">        131 :                                 shm_keepalive_cnt = 0;</span>
+<span class="lineNum">     382 </span>            :                         }
+<span class="lineNum">     383 </span>            : 
+<span class="lineNum">     384 </span><span class="lineCov">        580 :                         if (++send_keepalive_cnt &gt;= RESOLVER_KEEPALIVE_TIMER) {</span>
+<span class="lineNum">     385 </span><span class="lineCov">         35 :                                 send_keepalive_cnt = 0;</span>
+<span class="lineNum">     386 </span><span class="lineCov">        297 :                                 for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     387 </span><span class="lineCov">        262 :                                         int rv = write(w[i].fd[0], &quot;keepalive&quot;, 10);</span>
+<span class="lineNum">     388 </span>            :                                         (void) rv; // todo: error recovery
+<span class="lineNum">     389 </span>            :                                 }
+<span class="lineNum">     390 </span>            :                         }
+<span class="lineNum">     391 </span>            : 
+<span class="lineNum">     392 </span><span class="lineCov">        580 :                         t.tv_sec = 1;</span>
+<span class="lineNum">     393 </span><span class="lineCov">        580 :                         t.tv_nsec = 0;</span>
+<span class="lineNum">     394 </span><span class="lineCov">        580 :                         timestamp = time(NULL);</span>
+<span class="lineNum">     395 </span>            :                 }
+<span class="lineNum">     396 </span><span class="lineCov">        550 :                 else if (got_SIGCHLD) {</span>
+<span class="lineNum">     397 </span><span class="lineCov">          3 :                         pid_t pid = -1;;</span>
+<span class="lineNum">     398 </span>            :                         int status;
+<span class="lineNum">     399 </span><span class="lineCov">          3 :                         got_SIGCHLD = 0;</span>
+<span class="lineNum">     400 </span>            : 
+<span class="lineNum">     401 </span>            :                         // find a dead resolver
+<span class="lineNum">     402 </span>            :                         int i;
+<span class="lineNum">     403 </span><span class="lineCov">         15 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     404 </span><span class="lineCov">         13 :                                 pid = waitpid(w[i].pid, &amp;status, WNOHANG);</span>
+<span class="lineNum">     405 </span><span class="lineCov">         13 :                                 if (pid == w[i].pid) {</span>
+<span class="lineNum">     406 </span><span class="lineCov">          2 :                                         logprintf(&quot;Error: resolver %d (pid %u) terminated, restarting it...\n&quot;, i, pid);</span>
+<span class="lineNum">     407 </span><span class="lineCov">          2 :                                         kill(pid, SIGTERM); // just in case</span>
+<span class="lineNum">     408 </span><span class="lineCov">          2 :                                         start_sandbox(i);</span>
+<span class="lineNum">     409 </span>            :                                 }
+<span class="lineNum">     410 </span>            :                         }
+<span class="lineNum">     411 </span>            :                 }
+<span class="lineNum">     412 </span>            :                 else {
+<span class="lineNum">     413 </span><span class="lineCov">       3809 :                         for (i = 0; i &lt; arg_resolvers; i++) {</span>
+<span class="lineNum">     414 </span><span class="lineCov">       3262 :                                 if (FD_ISSET(w[i].fd[0], &amp;rset)) {</span>
+<span class="lineNum">     415 </span>            :                                         LogMsg msg;
+<span class="lineNum">     416 </span><span class="lineCov">        547 :                                         ssize_t len = read(w[i].fd[0], &amp;msg, sizeof(LogMsg));</span>
+<span class="lineNum">     417 </span><span class="lineCov">        547 :                                         if (len == -1) // todo: parse EINTR</span>
+<span class="lineNum">     418 </span><span class="lineNoCov">          0 :                                                 errExit(&quot;read&quot;);</span>
+<span class="lineNum">     419 </span>            : 
+<span class="lineNum">     420 </span>            :                                         // check length
+<span class="lineNum">     421 </span><span class="lineCov">        547 :                                         if (len != msg.h.len) {</span>
+<span class="lineNum">     422 </span><span class="lineNoCov">          0 :                                                 logprintf(&quot;Error: log message with an invalid length\n&quot;);</span>
+<span class="lineNum">     423 </span><span class="lineNoCov">          0 :                                                 continue;</span>
+<span class="lineNum">     424 </span>            :                                         }
+<span class="lineNum">     425 </span>            : 
+<span class="lineNum">     426 </span>            :                                         // parse the incoming message
+<span class="lineNum">     427 </span><span class="lineCov">        547 :                                         msg.buf[len - sizeof(LogMsgHeader)] = '\0';</span>
+<span class="lineNum">     428 </span>            : 
+<span class="lineNum">     429 </span>            :                                         // parse incoming message
+<span class="lineNum">     430 </span><span class="lineCov">        547 :                                         if (strncmp(msg.buf, &quot;Stats: &quot;, 7) == 0) {</span>
+<span class="lineNum">     431 </span>            :                                                 Stats s;
+<span class="lineNum">     432 </span>            :                                                 int k;
+<span class="lineNum">     433 </span><span class="lineCov">         45 :                                                 sscanf(msg.buf, &quot;Stats: rx %u, dropped %u, fallback %u, cached %u, fwd %u, %lf %d&quot;,</span>
+<span class="lineNum">     434 </span>            :                                                        &amp;s.rx,
+<span class="lineNum">     435 </span>            :                                                        &amp;s.drop,
+<span class="lineNum">     436 </span>            :                                                        &amp;s.fallback,
+<span class="lineNum">     437 </span>            :                                                        &amp;s.cached,
+<span class="lineNum">     438 </span>            :                                                        &amp;s.fwd,
+<span class="lineNum">     439 </span>            :                                                        &amp;s.ssl_pkts_timetrace,
+<span class="lineNum">     440 </span>            :                                                        &amp;k);
+<span class="lineNum">     441 </span><span class="lineCov">         45 :                                                 srv-&gt;keepalive_max = (k &gt; srv-&gt;keepalive_max)? k: srv-&gt;keepalive_max;</span>
+<span class="lineNum">     442 </span>            : 
+<span class="lineNum">     443 </span>            :                                                 // calculate global stats
+<span class="lineNum">     444 </span><span class="lineCov">         45 :                                                 stats.rx += s.rx;</span>
+<span class="lineNum">     445 </span><span class="lineCov">         45 :                                                 stats.drop += s.drop;</span>
+<span class="lineNum">     446 </span><span class="lineCov">         45 :                                                 stats.fallback += s.fallback;</span>
+<span class="lineNum">     447 </span><span class="lineCov">         45 :                                                 stats.cached += s.cached;</span>
+<span class="lineNum">     448 </span><span class="lineCov">         45 :                                                 stats.fwd += s.fwd;</span>
+<span class="lineNum">     449 </span><span class="lineCov">         45 :                                                 if (s.ssl_pkts_timetrace) {</span>
+<span class="lineNum">     450 </span><span class="lineCov">         16 :                                                         stats.ssl_pkts_timetrace += s.ssl_pkts_timetrace;</span>
+<span class="lineNum">     451 </span><span class="lineCov">         16 :                                                         stats.ssl_pkts_timetrace /= 2;</span>
+<span class="lineNum">     452 </span>            :                                                 }
+<span class="lineNum">     453 </span>            : 
+<span class="lineNum">     454 </span><span class="lineCov">         45 :                                                 shmem_store_stats(proxy_addr);</span>
+<span class="lineNum">     455 </span>            :                                         }
+<span class="lineNum">     456 </span><span class="lineCov">        502 :                                         else if (strncmp(msg.buf, &quot;Request: &quot;, 9) == 0) {</span>
+<span class="lineNum">     457 </span><span class="lineCov">         51 :                                                 print_time();</span>
+<span class="lineNum">     458 </span><span class="lineCov">         51 :                                                 printf(&quot;(%d) %s&quot;, i, msg.buf + 9);</span>
+<span class="lineNum">     459 </span><span class="lineCov">         51 :                                                 shmem_store_log(msg.buf + 9);</span>
+<span class="lineNum">     460 </span>            :                                         }
+<span class="lineNum">     461 </span><span class="lineCov">        451 :                                         else if (strncmp(msg.buf, &quot;resolver keepalive&quot;, 16) == 0)</span>
+<span class="lineNum">     462 </span><span class="lineCov">         68 :                                                 w[i].keepalive = RESOLVER_KEEPALIVE_SHUTDOWN;</span>
+<span class="lineNum">     463 </span>            :                                         else {
+<span class="lineNum">     464 </span><span class="lineCov">        383 :                                                 if (strncmp(msg.buf, &quot;SSL connection opened&quot;, 21) == 0) {</span>
+<span class="lineNum">     465 </span><span class="lineCov">        187 :                                                         stats.encrypted[i] = 1;</span>
+<span class="lineNum">     466 </span>            :                                                         // extract ip address
+<span class="lineNum">     467 </span><span class="lineCov">        187 :                                                         if (strncmp(msg.buf + 21, &quot; to &quot;, 4) == 0) {</span>
+<span class="lineNum">     468 </span><span class="lineCov">        187 :                                                                 uint32_t ip = 0;</span>
+<span class="lineNum">     469 </span><span class="lineCov">        187 :                                                                 if (0 == atoip(msg.buf + 25, &amp;ip))</span>
+<span class="lineNum">     470 </span><span class="lineCov">        187 :                                                                         stats.peer_ip[i] = ip;</span>
+<span class="lineNum">     471 </span><span class="lineCov">        187 : printf(&quot;ip %d.%d.%d.%d\n&quot;, PRINT_IP(ip));</span>
+<span class="lineNum">     472 </span>            :                                                         }
+<span class="lineNum">     473 </span><span class="lineCov">        187 :                                                         shmem_store_stats(proxy_addr);</span>
+<span class="lineNum">     474 </span>            :                                                 }
+<span class="lineNum">     475 </span><span class="lineCov">        196 :                                                 else if (strncmp(msg.buf, &quot;SSL connection closed&quot;, 21) == 0) {</span>
+<span class="lineNum">     476 </span><span class="lineNoCov">          0 :                                                         stats.encrypted[i] = 0;;</span>
+<span class="lineNum">     477 </span><span class="lineNoCov">          0 :                                                         stats.peer_ip[i] = 0;</span>
+<span class="lineNum">     478 </span><span class="lineNoCov">          0 :                                                         shmem_store_stats(proxy_addr);</span>
+<span class="lineNum">     479 </span>            :                                                 }
+<span class="lineNum">     480 </span>            : 
+<span class="lineNum">     481 </span>            :                                                 char *tmp;
+<span class="lineNum">     482 </span><span class="lineCov">        383 :                                                 if (asprintf(&amp;tmp, &quot;(%d) %s&quot;, i, msg.buf) == -1)</span>
+<span class="lineNum">     483 </span><span class="lineNoCov">          0 :                                                         errExit(&quot;asprintf&quot;);</span>
+<span class="lineNum">     484 </span><span class="lineCov">        383 :                                                 shmem_store_log(tmp);</span>
+<span class="lineNum">     485 </span>            : 
+<span class="lineNum">     486 </span>            :                                                 // trick logprintf in printing the timestamp
+<span class="lineNum">     487 </span><span class="lineCov">        383 :                                                 arg_id = i;</span>
+<span class="lineNum">     488 </span><span class="lineCov">        383 :                                                 logprintf(&quot;%s&quot;, tmp);</span>
+<span class="lineNum">     489 </span><span class="lineCov">        383 :                                                 arg_id = -1;</span>
+<span class="lineNum">     490 </span><span class="lineCov">        383 :                                                 free(tmp);</span>
+<span class="lineNum">     491 </span>            :                                         }
+<span class="lineNum">     492 </span>            : 
+<span class="lineNum">     493 </span>            :                                         // respond with a keepalive
+<span class="lineNum">     494 </span><span class="lineCov">        547 :                                         int rv = write(w[i].fd[0], &quot;keepalive&quot;, 10);</span>
+<span class="lineNum">     495 </span>            :                                         (void) rv; // todo: error recovery
+<span class="lineNum">     496 </span>            : 
+<span class="lineNum">     497 </span><span class="lineCov">        547 :                                         fflush(0);</span>
+<span class="lineNum">     498 </span>            :                                 }
+<span class="lineNum">     499 </span>            :                         }
+<span class="lineNum">     500 </span>            :                 }
+<span class="lineNum">     501 </span><span class="lineCov">       1129 :                 fflush(0);</span>
+<span class="lineNum">     502 </span>            :         }
+<span class="lineNum">     503 </span>            : }
 </pre>
       </td>
     </tr>

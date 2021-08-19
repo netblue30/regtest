@@ -31,13 +31,13 @@
             <td class="headerValue">gcov-file</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">35</td>
             <td class="headerCovTableEntry">37</td>
-            <td class="headerCovTableEntryHi">94.6 %</td>
+            <td class="headerCovTableEntry">39</td>
+            <td class="headerCovTableEntryHi">94.9 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">5</td>
@@ -61,7 +61,7 @@
 <pre class="sourceHeading">          Line data    Source code</pre>
 <pre class="source">
 <a name="1"><span class="lineNum">       1 </span>            : /*</a>
-<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
 <span class="lineNum">       3 </span>            :  *
 <span class="lineNum">       4 </span>            :  * This file is part of fdns project
 <span class="lineNum">       5 </span>            :  *
@@ -95,307 +95,429 @@
 <span class="lineNum">      33 </span>            : #include &lt;sys/types.h&gt;
 <span class="lineNum">      34 </span>            : #include &lt;sys/stat.h&gt;
 <span class="lineNum">      35 </span>            : #include &lt;fcntl.h&gt;
-<span class="lineNum">      36 </span>            : 
-<span class="lineNum">      37 </span>            : #define errExit(msg)    do { char msgout[500]; snprintf(msgout, 500, &quot;Error %s: %s:%d %s&quot;, msg, __FILE__, __LINE__, __FUNCTION__); perror(msgout); exit(1);} while (0)
-<span class="lineNum">      38 </span>            : 
-<span class="lineNum">      39 </span>            : // macro to print ip addresses in a printf statement
-<span class="lineNum">      40 </span>            : #define PRINT_IP(A) \
-<span class="lineNum">      41 </span>            :         ((int) (((A) &gt;&gt; 24) &amp; 0xFF)),  ((int) (((A) &gt;&gt; 16) &amp; 0xFF)), ((int) (((A) &gt;&gt; 8) &amp; 0xFF)), ((int) ( (A) &amp; 0xFF))
-<a name="42"><span class="lineNum">      42 </span>            : </a>
-<span class="lineNum">      43 </span>            : // read an IPv4 address and convert it to uint32_t
-<span class="lineNum">      44 </span><span class="lineCov">         27 : static inline int atoip(const char *str, uint32_t *ip) {</span>
-<span class="lineNum">      45 </span>            :         unsigned a, b, c, d;
-<span class="lineNum">      46 </span>            : 
-<span class="lineNum">      47 </span><span class="lineCov">         27 :         if (sscanf(str, &quot;%u.%u.%u.%u&quot;, &amp;a, &amp;b, &amp;c, &amp;d) != 4 || a &gt; 255 || b &gt; 255 || c &gt; 255 || d &gt; 255)</span>
-<span class="lineNum">      48 </span><span class="lineNoCov">          0 :                 return 1;</span>
-<span class="lineNum">      49 </span>            : 
-<span class="lineNum">      50 </span><span class="lineCov">         27 :         *ip = a * 0x1000000 + b * 0x10000 + c * 0x100 + d;</span>
-<span class="lineNum">      51 </span><span class="lineCov">         27 :         return 0;</span>
-<span class="lineNum">      52 </span>            : }
-<span class="lineNum">      53 </span>            : 
-<a name="54"><span class="lineNum">      54 </span>            : // check ip:port</a>
-<span class="lineNum">      55 </span>            : // return -1 if error
-<span class="lineNum">      56 </span><span class="lineCov">      10366 : static inline int check_addr_port(const char *str) {</span>
-<span class="lineNum">      57 </span>            :         unsigned a, b, c, d, e;
-<span class="lineNum">      58 </span>            : 
-<span class="lineNum">      59 </span>            :         // extract ip
-<span class="lineNum">      60 </span><span class="lineCov">      10366 :         int rv = sscanf(str, &quot;%u.%u.%u.%u:%u&quot;, &amp;a, &amp;b, &amp;c, &amp;d, &amp;e);</span>
-<span class="lineNum">      61 </span><span class="lineCov">      10366 :         if (rv != 5 || a &gt; 255 || b &gt; 255 || c &gt; 255 || d &gt; 255 || e &gt; 0xffffffff)</span>
-<span class="lineNum">      62 </span><span class="lineNoCov">          0 :                 return -1;</span>
-<span class="lineNum">      63 </span><span class="lineCov">      10366 :         return 0;</span>
-<span class="lineNum">      64 </span>            : }
-<span class="lineNum">      65 </span>            : 
-<span class="lineNum">      66 </span>            : // all timers are in seconds
-<span class="lineNum">      67 </span>            : #define RESOLVER_KEEPALIVE_TIMER 10 // keepalive messages sent by resolver processes
-<span class="lineNum">      68 </span>            : #define RESOLVER_KEEPALIVE_SHUTDOWN (RESOLVER_KEEPALIVE_TIMER * 3) // timer to detect a dead resolver process
-<span class="lineNum">      69 </span>            : #define FRONTEND_KEEPALIVE_TIMER 10 // keepalive messages sent by frontend processes
-<span class="lineNum">      70 </span>            : #define FRONTEND_KEEPALIVE_SHUTDOWN (FRONTEND_KEEPALIVE_TIMER * 3) // timer to detect the dead frontend process
-<span class="lineNum">      71 </span>            : #define RESOLVER_KEEPALIVE_AFTER_SLEEP (RESOLVER_KEEPALIVE_TIMER * 1.2) // after sleep detection
-<span class="lineNum">      72 </span>            : #define MONITOR_WAIT_TIMER 2    // wait for this number of seconds before restarting a failed resolver process
-<span class="lineNum">      73 </span>            : #define CONSOLE_PRINTOUT_TIMER 5        // transfer stats from resolver to frontend
-<span class="lineNum">      74 </span>            : #define SSL_REOPEN_TIMER 5      // try to reopen a failed SSL connection after this time
-<span class="lineNum">      75 </span>            : #define OUT_OF_SLEEP 20 // detect computer going out of sleep/hibernation, reinitialize SSL connections
-<span class="lineNum">      76 </span>            : #define CACHE_TTL_DEFAULT (40 * 60)     // default DNS cache ttl in seconds
-<span class="lineNum">      77 </span>            : #define CACHE_TTL_MIN (1 * 60)
-<span class="lineNum">      78 </span>            : #define CACHE_TTL_MAX (60 * 60)
-<span class="lineNum">      79 </span>            : #define CACHE_TTL_ERROR (10 * 60)       // cache ttl for errror mesage (such as NXDOMAIN) returned by the server
-<span class="lineNum">      80 </span>            : #define MAX_QUERY_SECOND 5
-<span class="lineNum">      81 </span>            : 
-<span class="lineNum">      82 </span>            : // number of resolver processes
-<span class="lineNum">      83 </span>            : #define RESOLVERS_CNT_MIN 1     // number of resolver processes
-<span class="lineNum">      84 </span>            : #define RESOLVERS_CNT_MAX 10
-<span class="lineNum">      85 </span>            : #define RESOLVERS_CNT_DEFAULT 3
-<span class="lineNum">      86 </span>            : #define UNIX_ADDRESS &quot;fdns&quot;   // internal UNIX socket address for communication between frontend and resolvers
-<span class="lineNum">      87 </span>            : #define DEFAULT_PROXY_ADDR &quot;127.1.1.1&quot;
-<span class="lineNum">      88 </span>            : #define FALLBACK_SERVER &quot;9.9.9.9&quot;
-<span class="lineNum">      89 </span>            : 
-<span class="lineNum">      90 </span>            : // filesystem paths
-<span class="lineNum">      91 </span>            : #define PATH_FDNS (PREFIX &quot;/bin/fdns&quot;)
-<span class="lineNum">      92 </span>            : #define PATH_RUN_FDNS &quot;/run/fdns&quot;
-<span class="lineNum">      93 </span>            : #define PATH_ETC_TRACKERS_LIST (SYSCONFDIR &quot;/trackers&quot;)
-<span class="lineNum">      94 </span>            : #define PATH_ETC_FP_TRACKERS_LIST (SYSCONFDIR &quot;/fp-trackers&quot;)
-<span class="lineNum">      95 </span>            : #define PATH_ETC_ADBLOCKER_LIST (SYSCONFDIR &quot;/adblocker&quot;)
-<span class="lineNum">      96 </span>            : #define PATH_ETC_COINBLOCKER_LIST (SYSCONFDIR &quot;/coinblocker&quot;)
-<span class="lineNum">      97 </span>            : #define PATH_ETC_DOH_LIST (SYSCONFDIR &quot;/doh&quot;)
-<span class="lineNum">      98 </span>            : #define PATH_ETC_HOSTS_LIST (SYSCONFDIR &quot;/hosts&quot;)
-<span class="lineNum">      99 </span>            : #define PATH_ETC_SERVER_LIST (SYSCONFDIR &quot;/servers&quot;)
-<span class="lineNum">     100 </span>            : #define PATH_ETC_RESOLVER_SECCOMP (SYSCONFDIR &quot;/resolver.seccomp&quot;)
-<span class="lineNum">     101 </span>            : #define PATH_LOG_FILE &quot;/var/log/fdns.log&quot;
-<span class="lineNum">     102 </span>            : #define PATH_STATS_FILE &quot;/fdns-stats&quot; // the actual path is /dev/shm/fdns-stats
-<span class="lineNum">     103 </span>            : 
+<span class="lineNum">      36 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span>            : #define errExit(msg)    do { char msgout[500]; snprintf(msgout, 500, &quot;Error %s: %s:%d %s&quot;, msg, __FILE__, __LINE__, __FUNCTION__); perror(msgout); exit(1);} while (0)
+<span class="lineNum">      39 </span>            : 
+<span class="lineNum">      40 </span>            : // macro to print ip addresses in a printf statement
+<span class="lineNum">      41 </span>            : #define PRINT_IP(A) \
+<span class="lineNum">      42 </span>            :         ((int) (((A) &gt;&gt; 24) &amp; 0xFF)),  ((int) (((A) &gt;&gt; 16) &amp; 0xFF)), ((int) (((A) &gt;&gt; 8) &amp; 0xFF)), ((int) ( (A) &amp; 0xFF))
+<a name="43"><span class="lineNum">      43 </span>            : </a>
+<span class="lineNum">      44 </span>            : // read an IPv4 address and convert it to uint32_t
+<span class="lineNum">      45 </span><span class="lineCov">        309 : static inline int atoip(const char *str, uint32_t *ip) {</span>
+<span class="lineNum">      46 </span>            :         unsigned a, b, c, d;
+<span class="lineNum">      47 </span>            : 
+<span class="lineNum">      48 </span><span class="lineCov">        309 :         if (sscanf(str, &quot;%u.%u.%u.%u&quot;, &amp;a, &amp;b, &amp;c, &amp;d) != 4 || a &gt; 255 || b &gt; 255 || c &gt; 255 || d &gt; 255)</span>
+<span class="lineNum">      49 </span><span class="lineNoCov">          0 :                 return 1;</span>
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span><span class="lineCov">        309 :         *ip = a * 0x1000000 + b * 0x10000 + c * 0x100 + d;</span>
+<span class="lineNum">      52 </span><span class="lineCov">        309 :         return 0;</span>
+<span class="lineNum">      53 </span>            : }
+<span class="lineNum">      54 </span>            : 
+<span class="lineNum">      55 </span>            : // check ip:port
+<span class="lineNum">      56 </span>            : // return -1 if error
+<span class="lineNum">      57 </span>            : static inline int check_addr_port(const char *str) {
+<span class="lineNum">      58 </span>            :         unsigned a, b, c, d;
+<span class="lineNum">      59 </span>            :         int e;
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            :         // extract ip
+<span class="lineNum">      62 </span>            :         int rv = sscanf(str, &quot;%u.%u.%u.%u:%d&quot;, &amp;a, &amp;b, &amp;c, &amp;d, &amp;e);
+<span class="lineNum">      63 </span>            :         if (rv != 5 || a &gt; 255 || b &gt; 255 || c &gt; 255 || d &gt; 255 || e &lt; 0 || e &gt; 0xffff)
+<span class="lineNum">      64 </span>            :                 return -1;
+<span class="lineNum">      65 </span>            :         return 0;
+<span class="lineNum">      66 </span>            : }
+<a name="67"><span class="lineNum">      67 </span>            : </a>
+<span class="lineNum">      68 </span>            : // random value from a range
+<span class="lineNum">      69 </span><span class="lineCov">         60 : static inline int rand_range(int min, int max) {</span>
+<span class="lineNum">      70 </span><span class="lineCov">         60 :         if (min == max)</span>
+<span class="lineNum">      71 </span><span class="lineNoCov">          0 :                 return min;</span>
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span><span class="lineCov">         60 :         assert(min &lt;= max);</span>
+<span class="lineNum">      74 </span><span class="lineCov">         60 :         int delta = rand() % (max + 1 - min);</span>
+<span class="lineNum">      75 </span><span class="lineCov">         60 :         return min + delta;</span>
+<span class="lineNum">      76 </span>            : }
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span>            : // resolvers/frontend timers in seconds
+<span class="lineNum">      79 </span>            : #define RESOLVER_KEEPALIVE_TIMER 10 // keepalive messages sent by resolver processes
+<span class="lineNum">      80 </span>            : #define RESOLVER_KEEPALIVE_SHUTDOWN (RESOLVER_KEEPALIVE_TIMER * 3) // timer to detect a dead resolver process
+<span class="lineNum">      81 </span>            : #define FRONTEND_KEEPALIVE_TIMER 10 // keepalive messages sent by frontend processes
+<span class="lineNum">      82 </span>            : #define FRONTEND_KEEPALIVE_SHUTDOWN (FRONTEND_KEEPALIVE_TIMER * 3) // timer to detect the dead frontend process
+<span class="lineNum">      83 </span>            : #define RESOLVER_KEEPALIVE_AFTER_SLEEP (RESOLVER_KEEPALIVE_TIMER * 1.2) // after sleep detection
+<span class="lineNum">      84 </span>            : #define MONITOR_WAIT_TIMER 2    // wait for this number of seconds before restarting a failed resolver process
+<span class="lineNum">      85 </span>            : #define CONSOLE_PRINTOUT_TIMER 5        // transfer stats from resolver to frontend
+<span class="lineNum">      86 </span>            : #define OUT_OF_SLEEP 10 // attempting to detect the computer coming out of sleep mode
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span>            : // transport protocol timeout
+<span class="lineNum">      89 </span>            : #define DOT_TIMEOUT 5 // wait time for DoT answer - will close the connection
+<span class="lineNum">      90 </span>            : #define H11_TIMEOUT 5 // wait time for HTTP1 (DoH) answer - will close the connection
+<span class="lineNum">      91 </span>            : #define H2_TIMEOUT 5 // wait time for HTTP2 (DoH) answer - will close the connection
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span>            : // transport  keealive
+<span class="lineNum">      94 </span>            : #define CONFIG_KEEPALIVE_MIN 5 // transport keepalive (PING) min value in seconds for --keepalive option
+<span class="lineNum">      95 </span>            : #define CONFIG_KEEPALIVE_MAX 600 // transport keepalive (PING) max value in seconds for --keepalive option
+<span class="lineNum">      96 </span>            : #define DEFAULT_KEEPALIVE_VALUE 60      // seconds
+<span class="lineNum">      97 </span>            : 
+<span class="lineNum">      98 </span>            : // when choosing servers...
+<span class="lineNum">      99 </span>            : #define SERVER_RESPONSE_LIMIT 100 // milliseconds - try another server if the first one responds above this limit
+<span class="lineNum">     100 </span>            : #define SERVER_KEEPALIVE_LIMIT 40 // seconds
+<span class="lineNum">     101 </span>            : 
+<span class="lineNum">     102 </span>            : #define FALLBACK_TIMEOUT 10 // wait time for DNS responses from the server in fallback
+<span class="lineNum">     103 </span>            :         // for NAT traversal, this value should be smaller than 30 seconds - the default is in /proc/sys/net/netfilter/nf_conntrack_udp_timeout
 <span class="lineNum">     104 </span>            : 
-<span class="lineNum">     105 </span>            : #define MAXBUF 2048
-<span class="lineNum">     106 </span>            : typedef struct stats_t {
-<span class="lineNum">     107 </span>            :         int changed;
+<span class="lineNum">     105 </span>            : // logging
+<span class="lineNum">     106 </span>            : #define LOG_TIMEOUT_DEFAULT 10          // amount of time to keep the log entries in shared memory in minutes
+<span class="lineNum">     107 </span>            : #define LOG_TIMEOUT_MAX 1140            // 1 day maximum
 <span class="lineNum">     108 </span>            : 
-<span class="lineNum">     109 </span>            :         // packet counts
-<span class="lineNum">     110 </span>            :         unsigned rx;
-<span class="lineNum">     111 </span>            :         unsigned fallback;
-<span class="lineNum">     112 </span>            :         unsigned drop;
-<span class="lineNum">     113 </span>            :         unsigned cached;
-<span class="lineNum">     114 </span>            :         unsigned fwd;
+<span class="lineNum">     109 </span>            : // cache
+<span class="lineNum">     110 </span>            : #define CACHE_TTL_DEFAULT (40 * 60)     // default DNS cache ttl in seconds
+<span class="lineNum">     111 </span>            : #define CACHE_TTL_MIN (1 * 60)
+<span class="lineNum">     112 </span>            : #define CACHE_TTL_MAX (60 * 60)
+<span class="lineNum">     113 </span>            : #define CACHE_TTL_ERROR 120     // cache ttl for errror mesage (such as NXDOMAIN) returned by the server
+<span class="lineNum">     114 </span>            : #define CACHE_PRINT_TIMEOUT     60      // list the domain in the cache
 <span class="lineNum">     115 </span>            : 
-<span class="lineNum">     116 </span>            :         // average time
-<span class="lineNum">     117 </span>            :         double ssl_pkts_timetrace;
-<span class="lineNum">     118 </span>            :         unsigned ssl_pkts_cnt;
-<span class="lineNum">     119 </span>            : } Stats;
+<span class="lineNum">     116 </span>            : // rate limitation
+<span class="lineNum">     117 </span>            : #define QPS_DEFAULT 10  // default queries per second limit for each resolver
+<span class="lineNum">     118 </span>            : #define QPS_MAX 20              // max --qps value
+<span class="lineNum">     119 </span>            : #define QPS_MIN 3               // min --qps value
 <span class="lineNum">     120 </span>            : 
-<span class="lineNum">     121 </span>            : typedef struct dnsserver_t {
-<span class="lineNum">     122 </span>            :         struct dnsserver_t *next;// linked list
-<span class="lineNum">     123 </span>            :         int  active;            // flag for random purposes
-<span class="lineNum">     124 </span>            : 
-<span class="lineNum">     125 </span>            :         // server data
-<span class="lineNum">     126 </span>            :         char *name;     // name
-<span class="lineNum">     127 </span>            :         char *website;  // website
-<span class="lineNum">     128 </span>            :         char *zone;             // geographical zone
-<span class="lineNum">     129 </span>            :         char *tags;     // description
-<span class="lineNum">     130 </span>            :         char *address;  // IP address
-<span class="lineNum">     131 </span>            :         char *host;             // POST request first line
-<span class="lineNum">     132 </span>            :         char *request;  // full POST request
-<span class="lineNum">     133 </span>            :         int sni;                // 1 or 0
-<span class="lineNum">     134 </span>            :         int keepalive;  // keepalive in seconds
-<a name="135"><span class="lineNum">     135 </span>            : } DnsServer;</a>
-<span class="lineNum">     136 </span>            : 
-<span class="lineNum">     137 </span><span class="lineCov">         21 : static inline void ansi_topleft(void) {</span>
-<span class="lineNum">     138 </span><span class="lineCov">         21 :         char str[] = {0x1b, '[', '1', ';',  '1', 'H', '\0'};</span>
-<span class="lineNum">     139 </span><span class="lineCov">         21 :         printf(&quot;%s&quot;, str);</span>
-<span class="lineNum">     140 </span><span class="lineCov">         21 :         fflush(0);</span>
-<a name="141"><span class="lineNum">     141 </span><span class="lineCov">         21 : }</span></a>
-<span class="lineNum">     142 </span>            : 
-<span class="lineNum">     143 </span><span class="lineCov">         21 : static inline void ansi_clrscr(void) {</span>
-<span class="lineNum">     144 </span><span class="lineCov">         21 :         ansi_topleft();</span>
-<span class="lineNum">     145 </span><span class="lineCov">         21 :         char str[] = {0x1b, '[', '0', 'J', '\0'};</span>
-<span class="lineNum">     146 </span><span class="lineCov">         21 :         printf(&quot;%s&quot;, str);</span>
-<span class="lineNum">     147 </span><span class="lineCov">         21 :         fflush(0);</span>
-<a name="148"><span class="lineNum">     148 </span><span class="lineCov">         21 : }</span></a>
+<span class="lineNum">     121 </span>            : // number of resolver processes
+<span class="lineNum">     122 </span>            : #define RESOLVERS_CNT_MIN 1     // number of resolver processes
+<span class="lineNum">     123 </span>            : #define RESOLVERS_CNT_MAX 10
+<span class="lineNum">     124 </span>            : #define RESOLVERS_CNT_DEFAULT 2
+<span class="lineNum">     125 </span>            : #define UNIX_ADDRESS &quot;fdns&quot;   // internal UNIX socket address for communication between frontend and resolvers
+<span class="lineNum">     126 </span>            : #define DEFAULT_PROXY_ADDR &quot;127.1.1.1&quot;
+<span class="lineNum">     127 </span>            : #define DEFAULT_PROXY_LOOPBACK &quot;127.0.0.1&quot;
+<span class="lineNum">     128 </span>            : #define MAX_FALLBACK_POOL 8     // fallback socket pool size
+<span class="lineNum">     129 </span>            : 
+<span class="lineNum">     130 </span>            : // filesystem paths
+<span class="lineNum">     131 </span>            : #define PATH_FDNS (PREFIX &quot;/bin/fdns&quot;)
+<span class="lineNum">     132 </span>            : #define PATH_RUN_FDNS &quot;/run/fdns&quot;
+<span class="lineNum">     133 </span>            : #define PATH_ETC_TRACKERS_LIST (SYSCONFDIR &quot;/trackers&quot;)
+<span class="lineNum">     134 </span>            : #define PATH_ETC_FP_TRACKERS_LIST (SYSCONFDIR &quot;/fp-trackers&quot;)
+<span class="lineNum">     135 </span>            : #define PATH_ETC_ADBLOCKER_LIST (SYSCONFDIR &quot;/adblocker&quot;)
+<span class="lineNum">     136 </span>            : #define PATH_ETC_COINBLOCKER_LIST (SYSCONFDIR &quot;/coinblocker&quot;)
+<span class="lineNum">     137 </span>            : #define PATH_ETC_DOH_LIST (SYSCONFDIR &quot;/doh&quot;)
+<span class="lineNum">     138 </span>            : #define PATH_ETC_HOSTS_LIST (SYSCONFDIR &quot;/hosts&quot;)
+<span class="lineNum">     139 </span>            : #define PATH_ETC_SERVER_LIST (SYSCONFDIR &quot;/servers&quot;)
+<span class="lineNum">     140 </span>            : #define PATH_ETC_SERVER_LOCAL_LIST (SYSCONFDIR &quot;/servers.local&quot;)
+<span class="lineNum">     141 </span>            : #define PATH_ETC_RESOLVER_SECCOMP (SYSCONFDIR &quot;/resolver.seccomp&quot;)
+<span class="lineNum">     142 </span>            : #define PATH_LOG_FILE &quot;/var/log/fdns.log&quot;
+<span class="lineNum">     143 </span>            : #define PATH_STATS_FILE &quot;/fdns-stats&quot; // the actual path is /dev/shm/fdns-stats
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span>            : #define MAXBUF 2048
+<span class="lineNum">     147 </span>            : typedef struct stats_t {
+<span class="lineNum">     148 </span>            :         int changed;
 <span class="lineNum">     149 </span>            : 
-<span class="lineNum">     150 </span><span class="lineCov">         18 : static inline void print_mem(unsigned char *msg, int len) {</span>
-<span class="lineNum">     151 </span>            :         int i;
-<span class="lineNum">     152 </span>            : 
-<span class="lineNum">     153 </span>            :         char buf[16 + 1];
-<span class="lineNum">     154 </span><span class="lineCov">         18 :         char *ptr = buf;</span>
-<span class="lineNum">     155 </span><span class="lineCov">         18 :         *ptr = '\0';</span>
+<span class="lineNum">     150 </span>            :         // packet counts
+<span class="lineNum">     151 </span>            :         unsigned rx;
+<span class="lineNum">     152 </span>            :         unsigned fallback;
+<span class="lineNum">     153 </span>            :         unsigned drop;
+<span class="lineNum">     154 </span>            :         unsigned cached;
+<span class="lineNum">     155 </span>            :         unsigned fwd;
 <span class="lineNum">     156 </span>            : 
-<span class="lineNum">     157 </span><span class="lineCov">       1150 :         for (i = 0; i &lt; len; i++, msg++) {</span>
-<span class="lineNum">     158 </span><span class="lineCov">       1132 :                 printf(&quot;%02x &quot;, *msg);</span>
-<span class="lineNum">     159 </span>            : 
-<span class="lineNum">     160 </span><span class="lineCov">       1132 :                 if (*msg &gt;= 0x20 &amp;&amp; *msg &lt;= 0x7f)</span>
-<span class="lineNum">     161 </span><span class="lineCov">       1060 :                         *ptr = *msg;</span>
-<span class="lineNum">     162 </span>            :                 else
-<span class="lineNum">     163 </span><span class="lineCov">         72 :                         *ptr = '.';</span>
-<span class="lineNum">     164 </span><span class="lineCov">       1132 :                 ptr++;</span>
+<span class="lineNum">     157 </span>            :         // average time
+<span class="lineNum">     158 </span>            :         double ssl_pkts_timetrace;
+<span class="lineNum">     159 </span>            :         unsigned ssl_pkts_cnt;
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span>            :         // per-resolver stats
+<span class="lineNum">     162 </span>            :         int encrypted[RESOLVERS_CNT_MAX];
+<span class="lineNum">     163 </span>            :         uint32_t peer_ip[RESOLVERS_CNT_MAX];
+<span class="lineNum">     164 </span>            : } Stats;
 <span class="lineNum">     165 </span>            : 
-<span class="lineNum">     166 </span><span class="lineCov">       1132 :                 if (i % 16 == 15) {</span>
-<span class="lineNum">     167 </span><span class="lineCov">         70 :                         *ptr = '\0';</span>
-<span class="lineNum">     168 </span><span class="lineCov">         70 :                         printf(&quot;\t%s\n&quot;, buf);</span>
-<span class="lineNum">     169 </span><span class="lineCov">         70 :                         memset(buf, 0, sizeof(buf));</span>
-<span class="lineNum">     170 </span><span class="lineCov">         70 :                         ptr = buf;</span>
-<span class="lineNum">     171 </span>            :                 }
-<span class="lineNum">     172 </span>            :         }
-<span class="lineNum">     173 </span><span class="lineCov">         18 :         printf(&quot;\t%s\n&quot;, buf);</span>
-<span class="lineNum">     174 </span><span class="lineCov">         18 : }</span>
-<span class="lineNum">     175 </span>            : 
-<span class="lineNum">     176 </span>            : 
-<span class="lineNum">     177 </span>            : // main.c
-<span class="lineNum">     178 </span>            : extern int arg_argc;
-<span class="lineNum">     179 </span>            : extern int arg_debug;
-<span class="lineNum">     180 </span>            : extern int arg_resolvers;
-<span class="lineNum">     181 </span>            : extern int arg_id;
-<span class="lineNum">     182 </span>            : extern int arg_fd;
-<span class="lineNum">     183 </span>            : extern int arg_nofilter;
-<span class="lineNum">     184 </span>            : extern int arg_ipv6;
-<span class="lineNum">     185 </span>            : extern int arg_daemonize;
-<span class="lineNum">     186 </span>            : extern int arg_allow_all_queries;
-<span class="lineNum">     187 </span>            : extern char *arg_server;
-<span class="lineNum">     188 </span>            : extern char *arg_proxy_addr;
-<span class="lineNum">     189 </span>            : extern int arg_proxy_addr_any;
-<span class="lineNum">     190 </span>            : extern char *arg_certfile;
-<span class="lineNum">     191 </span>            : extern char *arg_forwarder;
-<span class="lineNum">     192 </span>            : extern int arg_test_hosts;
-<span class="lineNum">     193 </span>            : extern char *arg_zone;
-<span class="lineNum">     194 </span>            : extern int arg_cache_ttl;
-<span class="lineNum">     195 </span>            : extern int arg_allow_local_doh;
-<span class="lineNum">     196 </span>            : extern char *arg_whitelist_file;
-<span class="lineNum">     197 </span>            : extern int arg_fallback_only;
-<span class="lineNum">     198 </span>            : extern Stats stats;
-<span class="lineNum">     199 </span>            : 
-<span class="lineNum">     200 </span>            : // dnsdb.c
-<span class="lineNum">     201 </span>            : void dnsdb_init(void);
-<span class="lineNum">     202 </span>            : void dnsdb_store(uint8_t *buf, struct sockaddr_in *addr);
-<span class="lineNum">     203 </span>            : struct sockaddr_in *dnsdb_retrieve(uint8_t *buf);
-<span class="lineNum">     204 </span>            : void dnsdb_timeout(void);
-<span class="lineNum">     205 </span>            : 
-<span class="lineNum">     206 </span>            : // ssl.c
-<span class="lineNum">     207 </span>            : typedef enum {
-<span class="lineNum">     208 </span>            :         SSL_CLOSED = 0,
-<span class="lineNum">     209 </span>            :         SSL_OPEN
-<span class="lineNum">     210 </span>            : } SSLState;
-<span class="lineNum">     211 </span>            : extern SSLState ssl_state;
-<span class="lineNum">     212 </span>            : 
-<span class="lineNum">     213 </span>            : void ssl_init(void);
-<span class="lineNum">     214 </span>            : void ssl_open(void);
-<span class="lineNum">     215 </span>            : void ssl_close(void);
-<span class="lineNum">     216 </span>            : int ssl_rxtx_dns(uint8_t *msg, int cnt);
-<span class="lineNum">     217 </span>            : int ssl_status_check(void);
-<span class="lineNum">     218 </span>            : 
-<span class="lineNum">     219 </span>            : // frontend.c
-<span class="lineNum">     220 </span>            : extern int encrypted[RESOLVERS_CNT_MAX];
-<span class="lineNum">     221 </span>            : void frontend(void);
-<span class="lineNum">     222 </span>            : 
-<span class="lineNum">     223 </span>            : // security.c
-<span class="lineNum">     224 </span>            : void daemonize(void);
-<span class="lineNum">     225 </span>            : void chroot_drop_privs(const char *username);
-<span class="lineNum">     226 </span>            : int seccomp_load_filter_list(void);
-<span class="lineNum">     227 </span>            : void seccomp_resolver(void);
+<span class="lineNum">     166 </span>            : typedef struct dnsserver_t {
+<span class="lineNum">     167 </span>            :         struct dnsserver_t *next;// linked list
+<span class="lineNum">     168 </span>            :         int  active;            // flag for random purposes
+<span class="lineNum">     169 </span>            : 
+<span class="lineNum">     170 </span>            :         // server data
+<span class="lineNum">     171 </span>            :         char *name;     // name
+<span class="lineNum">     172 </span>            :         char *address;  // IP address
+<span class="lineNum">     173 </span>            :         char *website;  // website
+<span class="lineNum">     174 </span>            :         char *zone;             // geographical zone
+<span class="lineNum">     175 </span>            :         char *tags;             // description
+<span class="lineNum">     176 </span>            :         char *host;             // authority in http2
+<span class="lineNum">     177 </span>            :         char *path;
+<span class="lineNum">     178 </span>            :         char *transport;        // supported transport types
+<span class="lineNum">     179 </span>            :         int sni;                // 1 or 0
+<span class="lineNum">     180 </span>            :         int test_sni;           // not read from the config file; 1 only when the server is specified by url with --server or --test-server
+<span class="lineNum">     181 </span>            :         int keepalive_query;    // 1 or 0
+<span class="lineNum">     182 </span>            : //      int keepalive_min;      // deprecated
+<span class="lineNum">     183 </span>            :         int keepalive_max;      // maximum vallue of keepalive in seconds
+<span class="lineNum">     184 </span>            : } DnsServer;
+<span class="lineNum">     185 </span>            : 
+<span class="lineNum">     186 </span>            : typedef struct dnstransport_t {
+<span class="lineNum">     187 </span>            :         const char *name;       // ALPN transport name
+<span class="lineNum">     188 </span>            :         const char *dns_type;   // dns type (DoH, DoT etc.
+<span class="lineNum">     189 </span>            : 
+<span class="lineNum">     190 </span>            :         // connect
+<span class="lineNum">     191 </span>            :         void (*init)(void);
+<span class="lineNum">     192 </span>            :         void (*close)(void);
+<span class="lineNum">     193 </span>            :         int (*connect)(void);
+<span class="lineNum">     194 </span>            : 
+<span class="lineNum">     195 </span>            :         // traffic
+<span class="lineNum">     196 </span>            :         int (*send_exampledotcom)(uint8_t *req);
+<span class="lineNum">     197 </span>            :         int (*send_query)(uint8_t *req, int cnt);
+<span class="lineNum">     198 </span>            :         int (*send_ping)(void);
+<span class="lineNum">     199 </span>            :         int (*exchange)(uint8_t *response, uint32_t stream);
+<span class="lineNum">     200 </span>            : 
+<span class="lineNum">     201 </span>            :         // stats
+<span class="lineNum">     202 </span>            :         void (*header_stats)(void);
+<span class="lineNum">     203 </span>            :         double (*bandwidth)(void);
+<span class="lineNum">     204 </span>            :         void (*print_url)(void);
+<span class="lineNum">     205 </span>            : } DnsTransport;
+<a name="206"><span class="lineNum">     206 </span>            : </a>
+<span class="lineNum">     207 </span>            : 
+<span class="lineNum">     208 </span><span class="lineCov">         27 : static inline void ansi_topleft(void) {</span>
+<span class="lineNum">     209 </span><span class="lineCov">         27 :         char str[] = {0x1b, '[', '1', ';',  '1', 'H', '\0'};</span>
+<span class="lineNum">     210 </span><span class="lineCov">         27 :         printf(&quot;%s&quot;, str);</span>
+<span class="lineNum">     211 </span><span class="lineCov">         27 :         fflush(0);</span>
+<a name="212"><span class="lineNum">     212 </span><span class="lineCov">         27 : }</span></a>
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineCov">         27 : static inline void ansi_clrscr(void) {</span>
+<span class="lineNum">     215 </span><span class="lineCov">         27 :         ansi_topleft();</span>
+<span class="lineNum">     216 </span><span class="lineCov">         27 :         char str[] = {0x1b, '[', '0', 'J', '\0'};</span>
+<span class="lineNum">     217 </span><span class="lineCov">         27 :         printf(&quot;%s&quot;, str);</span>
+<span class="lineNum">     218 </span><span class="lineCov">         27 :         fflush(0);</span>
+<a name="219"><span class="lineNum">     219 </span><span class="lineCov">         27 : }</span></a>
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span><span class="lineCov">         87 : static inline void print_mem(void *m, int len) {</span>
+<span class="lineNum">     222 </span>            :         int i;
+<span class="lineNum">     223 </span><span class="lineCov">         87 :         unsigned char *msg = (unsigned char *) m;</span>
+<span class="lineNum">     224 </span>            : 
+<span class="lineNum">     225 </span>            :         char buf[16 + 1];
+<span class="lineNum">     226 </span><span class="lineCov">         87 :         char *ptr = buf;</span>
+<span class="lineNum">     227 </span><span class="lineCov">         87 :         *ptr = '\0';</span>
 <span class="lineNum">     228 </span>            : 
-<span class="lineNum">     229 </span>            : // dns.c
-<span class="lineNum">     230 </span>            : typedef enum {
-<span class="lineNum">     231 </span>            :         DEST_DROP = 0,  // drop the packet
-<span class="lineNum">     232 </span>            :         DEST_SSL,               // send the packet over SSL
-<span class="lineNum">     233 </span>            :         DEST_LOCAL,     // local cache or filtered out
-<span class="lineNum">     234 </span>            :         DEST_FORWARDING,        // forwarding
-<span class="lineNum">     235 </span>            :         DEST_MAX // always the last one
-<span class="lineNum">     236 </span>            : } DnsDestination;
-<span class="lineNum">     237 </span>            : uint8_t *dns_parser(uint8_t *buf, ssize_t *len, DnsDestination *dest);
-<span class="lineNum">     238 </span>            : void dns_keepalive(void);
-<span class="lineNum">     239 </span>            : 
-<span class="lineNum">     240 </span>            : // filter.c
-<span class="lineNum">     241 </span>            : void filter_init(void);
-<span class="lineNum">     242 </span>            : void filter_postinit(void);
-<span class="lineNum">     243 </span>            : void filter_load_all_lists(void);
-<span class="lineNum">     244 </span>            : void filter_add(char label, const char *domain);
-<span class="lineNum">     245 </span>            : const char *filter_blocked(const char *str, int verbose);
-<span class="lineNum">     246 </span>            : void filter_test(char *url);
-<span class="lineNum">     247 </span>            : void filter_test_list(void);
+<span class="lineNum">     229 </span><span class="lineCov">       7340 :         for (i = 0; i &lt; len; i++, msg++) {</span>
+<span class="lineNum">     230 </span><span class="lineCov">       7253 :                 printf(&quot;%02x &quot;, *msg);</span>
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">       7253 :                 if (*msg &gt;= 0x20 &amp;&amp; *msg &lt;= 0x7f)</span>
+<span class="lineNum">     233 </span><span class="lineCov">       2235 :                         *ptr = *msg;</span>
+<span class="lineNum">     234 </span>            :                 else
+<span class="lineNum">     235 </span><span class="lineCov">       5018 :                         *ptr = '.';</span>
+<span class="lineNum">     236 </span><span class="lineCov">       7253 :                 ptr++;</span>
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span><span class="lineCov">       7253 :                 if (i % 16 == 15) {</span>
+<span class="lineNum">     239 </span><span class="lineCov">        407 :                         *ptr = '\0';</span>
+<span class="lineNum">     240 </span><span class="lineCov">        407 :                         printf(&quot;\t%s\n&quot;, buf);</span>
+<span class="lineNum">     241 </span><span class="lineCov">        407 :                         memset(buf, 0, sizeof(buf));</span>
+<span class="lineNum">     242 </span><span class="lineCov">        407 :                         ptr = buf;</span>
+<span class="lineNum">     243 </span>            :                 }
+<span class="lineNum">     244 </span>            :         }
+<span class="lineNum">     245 </span><span class="lineCov">         87 :         printf(&quot;\t%s\n&quot;, buf);</span>
+<span class="lineNum">     246 </span><span class="lineCov">         87 : }</span>
+<span class="lineNum">     247 </span>            : 
 <span class="lineNum">     248 </span>            : 
-<span class="lineNum">     249 </span>            : // log.c
-<span class="lineNum">     250 </span>            : typedef struct logmsgheader_t {
-<span class="lineNum">     251 </span>            :         uint16_t len; // packet length
-<span class="lineNum">     252 </span>            : } LogMsgHeader; // 24 bytes
-<span class="lineNum">     253 </span>            : 
-<span class="lineNum">     254 </span>            : typedef struct logmsg_t {
-<span class="lineNum">     255 </span>            :         LogMsgHeader h;
-<span class="lineNum">     256 </span>            : #define MAXMSG (1024 * 2)
-<span class="lineNum">     257 </span>            :         char buf[MAXMSG]; // text content ending in \0
-<span class="lineNum">     258 </span>            : } LogMsg;
-<span class="lineNum">     259 </span>            : 
-<span class="lineNum">     260 </span>            : void log_disable(void);
-<span class="lineNum">     261 </span>            : // remote logging (resolver processes)
-<span class="lineNum">     262 </span>            : void rlogprintf(const char *format, ...);
-<span class="lineNum">     263 </span>            : // local logging (monitor process)
-<span class="lineNum">     264 </span>            : void logprintf(const char *format, ...);
-<span class="lineNum">     265 </span>            : 
-<span class="lineNum">     266 </span>            : // util.c
-<span class="lineNum">     267 </span>            : int copy_file(const char *src, const char *dest);
-<span class="lineNum">     268 </span>            : 
-<span class="lineNum">     269 </span>            : // shmem.c
-<span class="lineNum">     270 </span>            : #define SHMEM_KEEPALIVE 3
-<span class="lineNum">     271 </span>            : void shmem_open(int create, const char *proxy_addr);
-<span class="lineNum">     272 </span>            : void shmem_store_stats(const char *proxy_addr);
-<span class="lineNum">     273 </span>            : void shmem_store_log(const char *str);
-<span class="lineNum">     274 </span>            : void shmem_print_stats(void);
-<span class="lineNum">     275 </span>            : void shmem_monitor_stats(const char *proxy_addr);
-<span class="lineNum">     276 </span>            : void shmem_keepalive(void);
-<span class="lineNum">     277 </span>            : 
-<span class="lineNum">     278 </span>            : // server.c
-<span class="lineNum">     279 </span>            : extern int server_print_zone;
-<span class="lineNum">     280 </span>            : extern int server_print_servers;
-<span class="lineNum">     281 </span>            : void server_load(void);
-<span class="lineNum">     282 </span>            : void server_list(const char *tag);
-<span class="lineNum">     283 </span>            : DnsServer *server_get(void);
-<span class="lineNum">     284 </span>            : // return 0 if ok, 1 if failed
-<span class="lineNum">     285 </span>            : void server_test_tag(const char *tag);
-<span class="lineNum">     286 </span>            : 
-<span class="lineNum">     287 </span>            : // cache.c
-<span class="lineNum">     288 </span>            : #define CACHE_NAME_LEN 100 // requests for domain names bigger than this value are not cached
-<span class="lineNum">     289 </span>            : void cache_set_name(const char *name, int ipv6);
-<span class="lineNum">     290 </span>            : const char *cache_get_name(void);
-<span class="lineNum">     291 </span>            : void cache_set_reply(uint8_t *reply, ssize_t len, int ttl);
-<span class="lineNum">     292 </span>            : uint8_t *cache_check(uint16_t id, const char *name, ssize_t *lenptr, int ipv6);
-<span class="lineNum">     293 </span>            : void cache_timeout(void);
-<span class="lineNum">     294 </span>            : void cache_init(void);
-<span class="lineNum">     295 </span>            : 
-<span class="lineNum">     296 </span>            : // resolver.c
-<span class="lineNum">     297 </span>            : void resolver(void);
+<span class="lineNum">     249 </span>            : // main.c
+<span class="lineNum">     250 </span>            : extern int arg_argc;
+<span class="lineNum">     251 </span>            : extern int arg_debug;
+<span class="lineNum">     252 </span>            : extern int arg_debug_transport;
+<span class="lineNum">     253 </span>            : extern int arg_debug_ssl;
+<span class="lineNum">     254 </span>            : extern int arg_resolvers;
+<span class="lineNum">     255 </span>            : extern int arg_id;
+<span class="lineNum">     256 </span>            : extern int arg_fd;
+<span class="lineNum">     257 </span>            : extern int arg_nofilter;
+<span class="lineNum">     258 </span>            : extern int arg_ipv6;
+<span class="lineNum">     259 </span>            : extern int arg_daemonize;
+<span class="lineNum">     260 </span>            : extern int arg_allow_all_queries;
+<span class="lineNum">     261 </span>            : extern char *arg_server;
+<span class="lineNum">     262 </span>            : extern char *arg_test_server;
+<span class="lineNum">     263 </span>            : extern char *arg_proxy_addr;
+<span class="lineNum">     264 </span>            : extern int arg_proxy_addr_any;
+<span class="lineNum">     265 </span>            : extern char *arg_certfile;
+<span class="lineNum">     266 </span>            : extern char *arg_forwarder;
+<span class="lineNum">     267 </span>            : extern char *arg_zone;
+<span class="lineNum">     268 </span>            : extern int arg_cache_ttl;
+<span class="lineNum">     269 </span>            : extern int arg_disable_local_doh;
+<span class="lineNum">     270 </span>            : extern char *arg_whitelist_file;
+<span class="lineNum">     271 </span>            : extern char *arg_blocklist_file;
+<span class="lineNum">     272 </span>            : extern int arg_fallback_only;
+<span class="lineNum">     273 </span>            : extern int arg_keepalive;
+<span class="lineNum">     274 </span>            : extern int arg_qps;
+<span class="lineNum">     275 </span>            : extern int arg_details;
+<span class="lineNum">     276 </span>            : extern char *arg_transport;
+<span class="lineNum">     277 </span>            : extern int arg_allow_self_signed_certs;
+<span class="lineNum">     278 </span>            : extern int arg_allow_expired_certs;
+<span class="lineNum">     279 </span>            : extern int arg_log_timeout;
+<span class="lineNum">     280 </span>            : extern char *arg_fallback_server;
+<span class="lineNum">     281 </span>            : extern char *arg_unlist;
+<span class="lineNum">     282 </span>            : extern int arg_clean_filters;
+<span class="lineNum">     283 </span>            : extern int env_admin_down;
+<span class="lineNum">     284 </span>            : extern Stats stats;
+<span class="lineNum">     285 </span>            : 
+<span class="lineNum">     286 </span>            : // dnsdb.c
+<span class="lineNum">     287 </span>            : void dnsdb_init(void);
+<span class="lineNum">     288 </span>            : void dnsdb_store(int pool_index, uint8_t *buf, struct sockaddr_in *addr);
+<span class="lineNum">     289 </span>            : struct sockaddr_in *dnsdb_retrieve(int pool_index, uint8_t *buf);
+<span class="lineNum">     290 </span>            : int dnsdb_timeout(void);
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span>            : // ssl.c
+<span class="lineNum">     293 </span>            : typedef enum {
+<span class="lineNum">     294 </span>            :         SSL_CLOSED = 0,
+<span class="lineNum">     295 </span>            :         SSL_OPEN
+<span class="lineNum">     296 </span>            : } SSLState;
+<span class="lineNum">     297 </span>            : extern SSLState ssl_state;
 <span class="lineNum">     298 </span>            : 
-<span class="lineNum">     299 </span>            : // net.c
-<span class="lineNum">     300 </span>            : void net_check_proxy_addr(const char *str);
-<span class="lineNum">     301 </span>            : int net_local_dns_socket(int reuse);
-<span class="lineNum">     302 </span>            : int net_remote_dns_socket(struct sockaddr_in *addr, const char *ipstr);
-<span class="lineNum">     303 </span>            : void net_local_unix_socket(void);
-<span class="lineNum">     304 </span>            : 
-<span class="lineNum">     305 </span>            : // forward.c
-<span class="lineNum">     306 </span>            : typedef struct forward_zone_t {
-<span class="lineNum">     307 </span>            :         struct forward_zone_t *next;
+<span class="lineNum">     299 </span>            : int ssl_test_open(void);
+<span class="lineNum">     300 </span>            : void ssl_init(void);
+<span class="lineNum">     301 </span>            : void ssl_open(void);
+<span class="lineNum">     302 </span>            : void ssl_close(void);
+<span class="lineNum">     303 </span>            : int ssl_status_check(void);
+<span class="lineNum">     304 </span>            : int ssl_rx(uint8_t *buf, int size);
+<span class="lineNum">     305 </span>            : int ssl_rx_timeout(uint8_t *buf, int size, int timeout);
+<span class="lineNum">     306 </span>            : int ssl_tx(uint8_t *buf, int len);
+<span class="lineNum">     307 </span>            : int ssl_get_socket(void);
 <span class="lineNum">     308 </span>            : 
-<span class="lineNum">     309 </span>            :         const char *name;       // domain name
-<span class="lineNum">     310 </span>            :         unsigned name_len;      // length of the domain name string
-<span class="lineNum">     311 </span>            :         const char *ip; // IP address
-<span class="lineNum">     312 </span>            : 
-<span class="lineNum">     313 </span>            :         // socket
-<span class="lineNum">     314 </span>            :         int sock;
-<span class="lineNum">     315 </span>            :         struct sockaddr_in saddr;
-<span class="lineNum">     316 </span>            :         socklen_t slen;
-<span class="lineNum">     317 </span>            : } Forwarder;
-<span class="lineNum">     318 </span>            : 
-<span class="lineNum">     319 </span>            : extern Forwarder *fwd;
-<span class="lineNum">     320 </span>            : extern Forwarder *fwd_active;
-<span class="lineNum">     321 </span>            : void forwarder_set(const char *str);
-<span class="lineNum">     322 </span>            : int forwarder_check(const char *domain, unsigned len);
-<span class="lineNum">     323 </span>            : 
-<span class="lineNum">     324 </span>            : // whitelist.c
-<span class="lineNum">     325 </span>            : int whitelist_cnt(void);
-<span class="lineNum">     326 </span>            : int whitelist_active(void);
-<span class="lineNum">     327 </span>            : void whitelist_add(const char *domain);
-<span class="lineNum">     328 </span>            : void whitelist_load_file(const char *fname);
-<span class="lineNum">     329 </span>            : void whitelist_command(char **argv);
-<span class="lineNum">     330 </span>            : int whitelist_blocked(const char *domain);
-<span class="lineNum">     331 </span>            : 
-<span class="lineNum">     332 </span>            : // procs.c
-<span class="lineNum">     333 </span>            : void procs_add(void);
-<span class="lineNum">     334 </span>            : void procs_list(void);
-<span class="lineNum">     335 </span>            : 
-<span class="lineNum">     336 </span>            : #endif
+<span class="lineNum">     309 </span>            : // frontend.c
+<span class="lineNum">     310 </span>            : void frontend(void);
+<span class="lineNum">     311 </span>            : 
+<span class="lineNum">     312 </span>            : // security.c
+<span class="lineNum">     313 </span>            : void daemonize(void);
+<span class="lineNum">     314 </span>            : void chroot_drop_privs(const char *username);
+<span class="lineNum">     315 </span>            : int seccomp_load_filter_list(void);
+<span class="lineNum">     316 </span>            : void seccomp_resolver(void);
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span>            : // dns.c
+<span class="lineNum">     319 </span>            : extern DnsTransport *transport;
+<span class="lineNum">     320 </span>            : typedef enum {
+<span class="lineNum">     321 </span>            :         DEST_DROP = 0,  // drop the packet
+<span class="lineNum">     322 </span>            :         DEST_SSL,               // send the packet over SSL
+<span class="lineNum">     323 </span>            :         DEST_LOCAL,     // local cache or filtered out
+<span class="lineNum">     324 </span>            :         DEST_FORWARDING,        // forwarding
+<span class="lineNum">     325 </span>            :         DEST_MAX // always the last one
+<span class="lineNum">     326 </span>            : } DnsDestination;
+<span class="lineNum">     327 </span>            : 
+<span class="lineNum">     328 </span>            : void dns_set_transport(const char *tname);
+<span class="lineNum">     329 </span>            : const char *dns_get_transport(void);
+<span class="lineNum">     330 </span>            : uint8_t *dns_parser(uint8_t *buf, ssize_t *len, DnsDestination *dest);
+<span class="lineNum">     331 </span>            : int dns_current_keepalive(void);
+<span class="lineNum">     332 </span>            : void dns_keepalive(void);
+<span class="lineNum">     333 </span>            : int dns_query(uint8_t *msg, int cnt);
+<span class="lineNum">     334 </span>            : 
+<span class="lineNum">     335 </span>            : // filter.c
+<span class="lineNum">     336 </span>            : void filter_init(void);
+<span class="lineNum">     337 </span>            : void filter_load_all_lists(void);
+<span class="lineNum">     338 </span>            : void filter_add(char label, const char *domain);
+<span class="lineNum">     339 </span>            : void filter_serach_add(char label, const char *domain);
+<span class="lineNum">     340 </span>            : const char *filter_blocked(const char *str, int verbose);
+<span class="lineNum">     341 </span>            : void filter_test(char *url);
+<span class="lineNum">     342 </span>            : void filter_test_list(void);
+<span class="lineNum">     343 </span>            : 
+<span class="lineNum">     344 </span>            : // log.c
+<span class="lineNum">     345 </span>            : typedef struct logmsgheader_t {
+<span class="lineNum">     346 </span>            :         uint16_t len;   // packet length
+<span class="lineNum">     347 </span>            : } LogMsgHeader; // 24 bytes
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span>            : typedef struct logmsg_t {
+<span class="lineNum">     350 </span>            :         LogMsgHeader h;
+<span class="lineNum">     351 </span>            : #define MAXMSG (1024 * 2)
+<span class="lineNum">     352 </span>            :         char buf[MAXMSG]; // text content ending in \0
+<span class="lineNum">     353 </span>            : } LogMsg;
+<span class="lineNum">     354 </span>            : 
+<span class="lineNum">     355 </span>            : void log_disable(void);
+<span class="lineNum">     356 </span>            : // remote logging (resolver processes)
+<span class="lineNum">     357 </span>            : void rlogprintf(const char *format, ...);
+<span class="lineNum">     358 </span>            : // local logging (monitor process)
+<span class="lineNum">     359 </span>            : void logprintf(const char *format, ...);
+<span class="lineNum">     360 </span>            : 
+<span class="lineNum">     361 </span>            : // util.c
+<span class="lineNum">     362 </span>            : int copy_file(const char *src, const char *dest);
+<span class="lineNum">     363 </span>            : 
+<span class="lineNum">     364 </span>            : // shmem.c
+<span class="lineNum">     365 </span>            : #define SHMEM_KEEPALIVE 3
+<span class="lineNum">     366 </span>            : void shmem_open(int create, const char *proxy_addr);
+<span class="lineNum">     367 </span>            : void shmem_store_stats(const char *proxy_addr);
+<span class="lineNum">     368 </span>            : void shmem_store_log(const char *str);
+<span class="lineNum">     369 </span>            : void shmem_print_stats(void);
+<span class="lineNum">     370 </span>            : void shmem_monitor_stats(const char *proxy_addr);
+<span class="lineNum">     371 </span>            : void shmem_keepalive(void);
+<span class="lineNum">     372 </span>            : void shm_timeout(void);
+<span class="lineNum">     373 </span>            : 
+<span class="lineNum">     374 </span>            : // server.c
+<span class="lineNum">     375 </span>            : extern int server_print_zone;
+<span class="lineNum">     376 </span>            : extern int server_print_servers;
+<span class="lineNum">     377 </span>            : extern int server_print_unlist;
+<span class="lineNum">     378 </span>            : void server_load(void);
+<span class="lineNum">     379 </span>            : void server_list(const char *tag);
+<span class="lineNum">     380 </span>            : DnsServer *server_get(void);
+<span class="lineNum">     381 </span>            : // return 0 if ok, 1 if failed
+<span class="lineNum">     382 </span>            : void server_test_tag(const char *tag);
+<span class="lineNum">     383 </span>            : void server_set_custom(const char *url);
+<span class="lineNum">     384 </span>            : DnsServer *server_fallback_get(void);
+<span class="lineNum">     385 </span>            : 
+<span class="lineNum">     386 </span>            : // cache.c
+<span class="lineNum">     387 </span>            : #define CACHE_NAME_LEN 100 // requests for domain names bigger than this value are not cached
+<span class="lineNum">     388 </span>            : void cache_set_name(const char *name, int qtype);
+<span class="lineNum">     389 </span>            : const char *cache_get_name(void);
+<span class="lineNum">     390 </span>            : void cache_set_reply(uint8_t *reply, ssize_t len, int ttl);
+<span class="lineNum">     391 </span>            : uint8_t *cache_check(uint16_t id, const char *name, ssize_t *lenptr, int qtype);
+<span class="lineNum">     392 </span>            : void cache_timeout(void);
+<span class="lineNum">     393 </span>            : void cache_init(void);
+<span class="lineNum">     394 </span>            : void print_cache(void);
+<span class="lineNum">     395 </span>            : 
+<span class="lineNum">     396 </span>            : // resolver.c
+<span class="lineNum">     397 </span>            : void resolver(void);
+<span class="lineNum">     398 </span>            : 
+<span class="lineNum">     399 </span>            : // net.c
+<span class="lineNum">     400 </span>            : void net_check_proxy_addr(const char *str);
+<span class="lineNum">     401 </span>            : int net_local_dns_socket(int reuse);
+<span class="lineNum">     402 </span>            : int net_remote_dns_socket(struct sockaddr_in *addr, const char *ipstr);
+<span class="lineNum">     403 </span>            : void net_local_unix_socket(void);
+<span class="lineNum">     404 </span>            : 
+<span class="lineNum">     405 </span>            : // forward.c
+<span class="lineNum">     406 </span>            : typedef struct forward_zone_t {
+<span class="lineNum">     407 </span>            :         struct forward_zone_t *next;
+<span class="lineNum">     408 </span>            : 
+<span class="lineNum">     409 </span>            :         const char *name;       // domain name
+<span class="lineNum">     410 </span>            :         unsigned name_len;      // length of the domain name string
+<span class="lineNum">     411 </span>            :         const char *ip; // IP address
+<span class="lineNum">     412 </span>            : 
+<span class="lineNum">     413 </span>            :         // socket
+<span class="lineNum">     414 </span>            :         int sock;
+<span class="lineNum">     415 </span>            :         struct sockaddr_in saddr;
+<span class="lineNum">     416 </span>            :         socklen_t slen;
+<span class="lineNum">     417 </span>            : } Forwarder;
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span>            : extern Forwarder *fwd_list;
+<span class="lineNum">     420 </span>            : extern Forwarder *fwd_active;
+<span class="lineNum">     421 </span>            : void forwarder_set(const char *str);
+<span class="lineNum">     422 </span>            : int forwarder_check(const char *domain, unsigned len);
+<span class="lineNum">     423 </span>            : 
+<span class="lineNum">     424 </span>            : // whitelist.c
+<span class="lineNum">     425 </span>            : int whitelist_cnt(void);
+<span class="lineNum">     426 </span>            : int blocklist_cnt(void);
+<span class="lineNum">     427 </span>            : int whitelist_active(void);
+<span class="lineNum">     428 </span>            : int blocklist_active(void);
+<span class="lineNum">     429 </span>            : void whitelist_add(const char *domain);
+<span class="lineNum">     430 </span>            : void blocklist_add(const char *domain);
+<span class="lineNum">     431 </span>            : void whitelist_load_file(const char *fname);
+<span class="lineNum">     432 </span>            : void blocklist_load_file(const char *fname);
+<span class="lineNum">     433 </span>            : void whitelist_command(char **argv);
+<span class="lineNum">     434 </span>            : void blocklist_command(char **argv);
+<span class="lineNum">     435 </span>            : int whitelist_blocked(const char *domain);
+<span class="lineNum">     436 </span>            : int blocklist_blocked(const char *domain);
+<span class="lineNum">     437 </span>            : 
+<span class="lineNum">     438 </span>            : // procs.c
+<span class="lineNum">     439 </span>            : extern int procs_addr_default;
+<span class="lineNum">     440 </span>            : extern int procs_addr_loopback;
+<span class="lineNum">     441 </span>            : extern char *procs_addr_real;
+<span class="lineNum">     442 </span>            : void procs_add(void);
+<span class="lineNum">     443 </span>            : void procs_exit(void);
+<span class="lineNum">     444 </span>            : void procs_list(void);
+<span class="lineNum">     445 </span>            : 
+<span class="lineNum">     446 </span>            : // h2.c
+<span class="lineNum">     447 </span>            : extern DnsTransport h2_transport;
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span>            : // huffman.c
+<span class="lineNum">     450 </span>            : char *huffman_search(uint8_t *hstr, int len);
+<span class="lineNum">     451 </span>            : 
+<span class="lineNum">     452 </span>            : // h11.c
+<span class="lineNum">     453 </span>            : extern DnsTransport h11_transport;
+<span class="lineNum">     454 </span>            : 
+<span class="lineNum">     455 </span>            : // dot.c
+<span class="lineNum">     456 </span>            : extern DnsTransport dot_transport;
+<span class="lineNum">     457 </span>            : 
+<span class="lineNum">     458 </span>            : #endif
 </pre>
       </td>
     </tr>

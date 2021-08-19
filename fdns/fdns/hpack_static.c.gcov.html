@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/hpack_static.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - hpack_static.c<span style="font-size: 80%;"> (source / <a href="hpack_static.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project based on Dridi Boukelmoune implementation,
+<span class="lineNum">       5 </span>            :  * see below.
+<span class="lineNum">       6 </span>            :  *
+<span class="lineNum">       7 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       8 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       9 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">      10 </span>            :  * (at your option) any later version.
+<span class="lineNum">      11 </span>            :  *
+<span class="lineNum">      12 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      13 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      14 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      15 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      18 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      19 </span>            : */
+<span class="lineNum">      20 </span>            : 
+<span class="lineNum">      21 </span>            : #include &quot;hpack_static.h&quot;
+<span class="lineNum">      22 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      23 </span>            : 
+<span class="lineNum">      24 </span>            : static HpackStatic hps[] = {
+<span class="lineNum">      25 </span>            :         {&quot;&quot;, &quot;&quot;},   // null entry 0
+<span class="lineNum">      26 </span>            :         {&quot;:authority&quot;,                  &quot;&quot;},
+<span class="lineNum">      27 </span>            :         {&quot;:method&quot;,                     &quot;GET&quot;},
+<span class="lineNum">      28 </span>            :         {&quot;:method&quot;,                     &quot;POST&quot;},
+<span class="lineNum">      29 </span>            :         {&quot;:path&quot;,                       &quot;/&quot;},
+<span class="lineNum">      30 </span>            :         {&quot;:path&quot;,                       &quot;/index.html&quot;},
+<span class="lineNum">      31 </span>            :         {&quot;:scheme&quot;,                     &quot;http&quot;},
+<span class="lineNum">      32 </span>            :         {&quot;:scheme&quot;,                     &quot;https&quot;},
+<span class="lineNum">      33 </span>            :         {&quot;:status&quot;,                     &quot;200&quot;},
+<span class="lineNum">      34 </span>            :         {&quot;:status&quot;,                     &quot;204&quot;},
+<span class="lineNum">      35 </span>            :         {&quot;:status&quot;,                     &quot;206&quot;},
+<span class="lineNum">      36 </span>            :         {&quot;:status&quot;,                     &quot;304&quot;},
+<span class="lineNum">      37 </span>            :         {&quot;:status&quot;,                     &quot;400&quot;},
+<span class="lineNum">      38 </span>            :         {&quot;:status&quot;,                     &quot;404&quot;},
+<span class="lineNum">      39 </span>            :         {&quot;:status&quot;,                     &quot;500&quot;},
+<span class="lineNum">      40 </span>            :         {&quot;accept-charset&quot;,              &quot;&quot;},
+<span class="lineNum">      41 </span>            :         {&quot;accept-encoding&quot;,             &quot;gzip, deflate&quot;},
+<span class="lineNum">      42 </span>            :         {&quot;accept-language&quot;,             &quot;&quot;},
+<span class="lineNum">      43 </span>            :         {&quot;accept-ranges&quot;,               &quot;&quot;},
+<span class="lineNum">      44 </span>            :         {&quot;accept&quot;,                      &quot;&quot;},
+<span class="lineNum">      45 </span>            :         {&quot;access-control-allow-origin&quot;, &quot;&quot;},
+<span class="lineNum">      46 </span>            :         {&quot;age&quot;,                         &quot;&quot;},
+<span class="lineNum">      47 </span>            :         {&quot;allow&quot;,                       &quot;&quot;},
+<span class="lineNum">      48 </span>            :         {&quot;authorization&quot;,               &quot;&quot;},
+<span class="lineNum">      49 </span>            :         {&quot;cache-control&quot;,               &quot;&quot;},
+<span class="lineNum">      50 </span>            :         {&quot;content-disposition&quot;,         &quot;&quot;},
+<span class="lineNum">      51 </span>            :         {&quot;content-encoding&quot;,            &quot;&quot;},
+<span class="lineNum">      52 </span>            :         {&quot;content-language&quot;,            &quot;&quot;},
+<span class="lineNum">      53 </span>            :         {&quot;content-length&quot;,              &quot;&quot;},
+<span class="lineNum">      54 </span>            :         {&quot;content-location&quot;,            &quot;&quot;},
+<span class="lineNum">      55 </span>            :         {&quot;content-range&quot;,               &quot;&quot;},
+<span class="lineNum">      56 </span>            :         {&quot;content-type&quot;,                &quot;&quot;},
+<span class="lineNum">      57 </span>            :         {&quot;cookie&quot;,                      &quot;&quot;},
+<span class="lineNum">      58 </span>            :         {&quot;date&quot;,                        &quot;&quot;},
+<span class="lineNum">      59 </span>            :         {&quot;etag&quot;,                        &quot;&quot;},
+<span class="lineNum">      60 </span>            :         {&quot;expect&quot;,                      &quot;&quot;},
+<span class="lineNum">      61 </span>            :         {&quot;expires&quot;,                     &quot;&quot;},
+<span class="lineNum">      62 </span>            :         {&quot;from&quot;,                        &quot;&quot;},
+<span class="lineNum">      63 </span>            :         {&quot;host&quot;,                        &quot;&quot;},
+<span class="lineNum">      64 </span>            :         {&quot;if-match&quot;,                    &quot;&quot;},
+<span class="lineNum">      65 </span>            :         {&quot;if-modified-since&quot;,           &quot;&quot;},
+<span class="lineNum">      66 </span>            :         {&quot;if-none-match&quot;,               &quot;&quot;},
+<span class="lineNum">      67 </span>            :         {&quot;if-range&quot;,                    &quot;&quot;},
+<span class="lineNum">      68 </span>            :         {&quot;if-unmodified-since&quot;,         &quot;&quot;},
+<span class="lineNum">      69 </span>            :         {&quot;last-modified&quot;,               &quot;&quot;},
+<span class="lineNum">      70 </span>            :         {&quot;link&quot;,                        &quot;&quot;},
+<span class="lineNum">      71 </span>            :         {&quot;location&quot;,                    &quot;&quot;},
+<span class="lineNum">      72 </span>            :         {&quot;max-forwards&quot;,                &quot;&quot;},
+<span class="lineNum">      73 </span>            :         {&quot;proxy-authenticate&quot;,          &quot;&quot;},
+<span class="lineNum">      74 </span>            :         {&quot;proxy-authorization&quot;,         &quot;&quot;},
+<span class="lineNum">      75 </span>            :         {&quot;range&quot;,                       &quot;&quot;},
+<span class="lineNum">      76 </span>            :         {&quot;referer&quot;,                     &quot;&quot;},
+<span class="lineNum">      77 </span>            :         {&quot;refresh&quot;,                     &quot;&quot;},
+<span class="lineNum">      78 </span>            :         {&quot;retry-after&quot;,                 &quot;&quot;},
+<span class="lineNum">      79 </span>            :         {&quot;server&quot;,                      &quot;&quot;},
+<span class="lineNum">      80 </span>            :         {&quot;set-cookie&quot;,                  &quot;&quot;},
+<span class="lineNum">      81 </span>            :         {&quot;strict-transport-security&quot;,   &quot;&quot;},
+<span class="lineNum">      82 </span>            :         {&quot;transfer-encoding&quot;,           &quot;&quot;},
+<span class="lineNum">      83 </span>            :         {&quot;user-agent&quot;,                  &quot;&quot;},
+<span class="lineNum">      84 </span>            :         {&quot;vary&quot;,                        &quot;&quot;},
+<span class="lineNum">      85 </span>            :         {&quot;via&quot;,                         &quot;&quot;},
+<span class="lineNum">      86 </span>            :         {&quot;www-authenticate&quot;,            &quot;&quot;},
+<a name="87"><span class="lineNum">      87 </span>            : };</a>
+<span class="lineNum">      88 </span>            : 
+<span class="lineNum">      89 </span><span class="lineCov">       1074 : HpackStatic *hpack_static_get(unsigned id) {</span>
+<span class="lineNum">      90 </span><span class="lineCov">       1074 :         if (id &lt;= 0 || id &gt; sizeof(hps) / sizeof(HpackStatic))</span>
+<span class="lineNum">      91 </span><span class="lineCov">        348 :                 return NULL;</span>
+<span class="lineNum">      92 </span><span class="lineCov">        726 :         return &amp;hps[id];</span>
+<span class="lineNum">      93 </span>            : }
+<span class="lineNum">      94 </span>            : 
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

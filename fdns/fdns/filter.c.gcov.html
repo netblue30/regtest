@@ -31,17 +31,17 @@
             <td class="headerValue">gcov-file</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">179</td>
-            <td class="headerCovTableEntry">207</td>
-            <td class="headerCovTableEntryMed">86.5 %</td>
+            <td class="headerCovTableEntry">182</td>
+            <td class="headerCovTableEntry">232</td>
+            <td class="headerCovTableEntryMed">78.4 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2020-05-07 13:25:26</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">13</td>
-            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">14</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -61,7 +61,7 @@
 <pre class="sourceHeading">          Line data    Source code</pre>
 <pre class="source">
 <a name="1"><span class="lineNum">       1 </span>            : /*</a>
-<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2020 FDNS Authors
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
 <span class="lineNum">       3 </span>            :  *
 <span class="lineNum">       4 </span>            :  * This file is part of fdns project
 <span class="lineNum">       5 </span>            :  *
@@ -84,27 +84,27 @@
 <span class="lineNum">      22 </span>            : // debug statistics
 <span class="lineNum">      23 </span>            : //#define DEBUG_STATS
 <span class="lineNum">      24 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">      25 </span>            : static unsigned smem = 0;       // memory
-<span class="lineNum">      26 </span>            : static unsigned sentries = 0;   // entries
-<span class="lineNum">      27 </span>            : static unsigned scnt = 0;               // print counter
-<span class="lineNum">      28 </span>            : static double stime = 0;                // accumulated search access time
+<span class="lineNum">      25 </span>            : static unsigned stats_mem = 0;  // memory
+<span class="lineNum">      26 </span>            : static unsigned stats_entries = 0;      // entries
+<span class="lineNum">      27 </span>            : static unsigned stats_cnt = 0;  // print counter
+<span class="lineNum">      28 </span>            : static double stats_time = 0;           // accumulated search access time
 <a name="29"><span class="lineNum">      29 </span>            : #endif</a>
 <span class="lineNum">      30 </span>            : 
-<span class="lineNum">      31 </span><span class="lineCov">      21471 : static inline const char *label2str(char label) {</span>
-<span class="lineNum">      32 </span><span class="lineCov">      21471 :         if (label == 'A')</span>
-<span class="lineNum">      33 </span><span class="lineCov">      10359 :                 return &quot;ad&quot;;</span>
-<span class="lineNum">      34 </span><span class="lineCov">      11112 :         else if (label == 'T')</span>
-<span class="lineNum">      35 </span><span class="lineCov">       1809 :                 return &quot;tracker&quot;;</span>
-<span class="lineNum">      36 </span><span class="lineCov">       9303 :         else if (label == 'F')</span>
-<span class="lineNum">      37 </span><span class="lineCov">       8930 :                 return &quot;fp-tracker&quot;; // first-party tracker</span>
-<span class="lineNum">      38 </span><span class="lineCov">        373 :         else if (label == 'M')</span>
-<span class="lineNum">      39 </span><span class="lineNoCov">          0 :                 return &quot;miner&quot;;</span>
-<span class="lineNum">      40 </span><span class="lineCov">        373 :         else if (label == 'H')</span>
+<span class="lineNum">      31 </span><span class="lineCov">     153648 : static inline const char *label2str(char label) {</span>
+<span class="lineNum">      32 </span><span class="lineCov">     153648 :         if (label == 'A')</span>
+<span class="lineNum">      33 </span><span class="lineCov">     146007 :                 return &quot;ad&quot;;</span>
+<span class="lineNum">      34 </span><span class="lineCov">       7641 :         else if (label == 'T')</span>
+<span class="lineNum">      35 </span><span class="lineCov">          2 :                 return &quot;tracker&quot;;</span>
+<span class="lineNum">      36 </span><span class="lineCov">       7639 :         else if (label == 'F')</span>
+<span class="lineNum">      37 </span><span class="lineNoCov">          0 :                 return &quot;fp-tracker&quot;; // first-party tracker</span>
+<span class="lineNum">      38 </span><span class="lineCov">       7639 :         else if (label == 'M')</span>
+<span class="lineNum">      39 </span><span class="lineCov">       7636 :                 return &quot;miner&quot;;</span>
+<span class="lineNum">      40 </span><span class="lineCov">          3 :         else if (label == 'H')</span>
 <span class="lineNum">      41 </span><span class="lineNoCov">          0 :                 return &quot;hosts&quot;;</span>
-<span class="lineNum">      42 </span><span class="lineCov">        373 :         else if (label == 'R')</span>
-<span class="lineNum">      43 </span><span class="lineCov">         95 :                 return &quot;reserved&quot;;</span>
-<span class="lineNum">      44 </span><span class="lineCov">        278 :         else if (label == 'D')</span>
-<span class="lineNum">      45 </span><span class="lineCov">        278 :                 return &quot;doh&quot;;</span>
+<span class="lineNum">      42 </span><span class="lineCov">          3 :         else if (label == 'R')</span>
+<span class="lineNum">      43 </span><span class="lineNoCov">          0 :                 return &quot;reserved&quot;;</span>
+<span class="lineNum">      44 </span><span class="lineCov">          3 :         else if (label == 'D')</span>
+<span class="lineNum">      45 </span><span class="lineCov">          3 :                 return &quot;doh&quot;;</span>
 <span class="lineNum">      46 </span>            : 
 <span class="lineNum">      47 </span><span class="lineNoCov">          0 :         return &quot;?&quot;;</span>
 <span class="lineNum">      48 </span>            : }
@@ -151,391 +151,439 @@
 <span class="lineNum">      89 </span>            :         {'A', &quot;^oascentral.&quot;, NULL, 0},
 <span class="lineNum">      90 </span>            :         {'T', &quot;^stats.&quot;, NULL, 0},
 <span class="lineNum">      91 </span>            :         {'T', &quot;^tag.&quot;, NULL, 0},
-<span class="lineNum">      92 </span>            : 
-<span class="lineNum">      93 </span>            :         {'A', &quot;.ad.&quot;, &quot;.ad.jp&quot;, 0}, // .ad.jp is popular Japanese domain
-<span class="lineNum">      94 </span>            :         {'A', &quot;.ads.&quot;, NULL, 0},
-<span class="lineNum">      95 </span>            :         {'A', &quot;admob.&quot;, NULL, 0},
-<span class="lineNum">      96 </span>            :         {'A', &quot;adserver&quot;, NULL, 0},
-<span class="lineNum">      97 </span>            :         {'A', &quot;advertising&quot;, NULL, 0},
-<span class="lineNum">      98 </span>            :         {'T', &quot;analytic.&quot;, NULL, 0},
-<span class="lineNum">      99 </span>            :         {'T', &quot;analytics.&quot;, NULL, 0},
-<span class="lineNum">     100 </span>            :         {'T', &quot;click.&quot;, NULL, 0},
-<span class="lineNum">     101 </span>            :         {'T', &quot;clickstatsview.&quot;, NULL, 0},
-<span class="lineNum">     102 </span>            :         {'T', &quot;counter.&quot;, NULL, 0},
-<span class="lineNum">     103 </span>            :         {'T', &quot;tags.&quot;, NULL, 0},
-<span class="lineNum">     104 </span>            :         {'T', &quot;tracking.&quot;, NULL, 0},
-<span class="lineNum">     105 </span>            : //      &quot;tracker.&quot;,   used by bittorrent trackers
-<span class="lineNum">     106 </span>            :         {'T', &quot;telemetry.&quot;, NULL, 0},
-<span class="lineNum">     107 </span>            :         {'T', &quot;pixel.&quot;, NULL, 0},
-<span class="lineNum">     108 </span>            : 
-<span class="lineNum">     109 </span>            :         // minimize first-party trackers list
-<span class="lineNum">     110 </span>            :         {'F', &quot;^somniture.&quot;, 0}, // 30
-<span class="lineNum">     111 </span>            :         {'F', &quot;^aa-metrics.&quot;, 0}, // 20
-<span class="lineNum">     112 </span>            :         {'F', &quot;^smetric.&quot;, 0}, //  2711
-<span class="lineNum">     113 </span>            :         {'F', &quot;^smetrics.&quot;, 0}, //  2642
-<span class="lineNum">     114 </span>            :         {'F', &quot;^tr.&quot;, 0}, // 1756
-<span class="lineNum">     115 </span>            :         {'F', &quot;^metric.&quot;, 0}, // 950
-<span class="lineNum">     116 </span>            :         {'F', &quot;^metrics.&quot;, 0}, // 644
-<span class="lineNum">     117 </span>            :         {'F', &quot;^mdws.&quot;, 0}, // 193
-<span class="lineNum">     118 </span>            :         {'F', &quot;^srepdata.&quot;, 0}, // 200
-<span class="lineNum">     119 </span>            :         {'F', &quot;^marketing.net.&quot;, 0}, // 66
-<span class="lineNum">     120 </span>            :         {'F', &quot;.ati-host.net.&quot;, 0},  // 91
-<span class="lineNum">     121 </span>            :         {'F', &quot;^sadbmetrics.&quot;, 0}, // 67
-<span class="lineNum">     122 </span>            :         {'F', &quot;^somni.&quot;, 0}, // 198
-<span class="lineNum">     123 </span>            :         {'F', &quot;^srepdata,&quot;, 0}, //198
-<span class="lineNum">     124 </span>            :         {'F', &quot;^sstats.&quot;, 0}, // 339
-<span class="lineNum">     125 </span>            :         {'F', &quot;^sw88.&quot;, 0}, // 63
-<span class="lineNum">     126 </span>            :         {'F', &quot;^tk.airfrance.&quot;, 0}, // 98
-<span class="lineNum">     127 </span>            : 
-<span class="lineNum">     128 </span>            :         // hardcoded DoH servers
-<span class="lineNum">     129 </span>            :         // this is the last section before the NULL entry
-<span class="lineNum">     130 </span>            :         // the NULL entry is moved up for --allow-local-doh
-<span class="lineNum">     131 </span>            :         {'D', &quot;$dnscrypt-cert.oszx.co&quot;, 0},
-<span class="lineNum">     132 </span>            :         {'D', &quot;$cloudflare-dns.com&quot;, 0},
-<span class="lineNum">     133 </span>            :         {'D', &quot;$anycast.censurfridns.dk&quot;, 0},
-<span class="lineNum">     134 </span>            :         {'D', &quot;$dns.nextdns.io&quot;, 0},
-<span class="lineNum">     135 </span>            : 
-<span class="lineNum">     136 </span>            :         {0, NULL, 0}
-<span class="lineNum">     137 </span>            : };
+<span class="lineNum">      92 </span>            :         {'M', &quot;^hostmaster.hostmaster&quot;, NULL, 0},
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span>            :         {'A', &quot;.ad.&quot;, &quot;.ad.jp&quot;, 0}, // .ad.jp is popular Japanese domain
+<span class="lineNum">      95 </span>            :         {'A', &quot;.ads.&quot;, NULL, 0},
+<span class="lineNum">      96 </span>            :         {'A', &quot;admob.&quot;, NULL, 0},
+<span class="lineNum">      97 </span>            :         {'A', &quot;adserver&quot;, NULL, 0},
+<span class="lineNum">      98 </span>            :         {'A', &quot;advertising&quot;, NULL, 0},
+<span class="lineNum">      99 </span>            :         {'T', &quot;analytic.&quot;, NULL, 0},
+<span class="lineNum">     100 </span>            :         {'T', &quot;analytics.&quot;, NULL, 0},
+<span class="lineNum">     101 </span>            :         {'T', &quot;click.&quot;, NULL, 0},
+<span class="lineNum">     102 </span>            :         {'T', &quot;clickstatsview.&quot;, NULL, 0},
+<span class="lineNum">     103 </span>            :         {'T', &quot;counter.&quot;, NULL, 0},
+<span class="lineNum">     104 </span>            :         {'T', &quot;tags.&quot;, NULL, 0},
+<span class="lineNum">     105 </span>            :         {'T', &quot;tracking.&quot;, NULL, 0},
+<span class="lineNum">     106 </span>            : //      &quot;tracker.&quot;,   used by bittorrent trackers
+<span class="lineNum">     107 </span>            :         {'T', &quot;telemetry.&quot;, NULL, 0},
+<span class="lineNum">     108 </span>            :         {'T', &quot;pixel.&quot;, NULL, 0},
+<span class="lineNum">     109 </span>            : 
+<span class="lineNum">     110 </span>            :         // minimize first-party trackers list
+<span class="lineNum">     111 </span>            :         {'F', &quot;$metric.gstatic.com&quot;, NULL, 0}, // Google first-party tracker
+<span class="lineNum">     112 </span>            :         {'F', &quot;^somniture.&quot;, NULL, 0}, // 30
+<span class="lineNum">     113 </span>            :         {'F', &quot;^aa-metrics.&quot;, NULL, 0}, // 20
+<span class="lineNum">     114 </span>            :         {'F', &quot;^smetric.&quot;, NULL, 0}, //  2711
+<span class="lineNum">     115 </span>            :         {'F', &quot;^smetrics.&quot;, NULL, 0}, //  2642
+<span class="lineNum">     116 </span>            :         {'F', &quot;^tr.&quot;, NULL, 0}, // 1756
+<span class="lineNum">     117 </span>            :         {'F', &quot;^metric.&quot;, NULL, 0}, // 950
+<span class="lineNum">     118 </span>            :         {'F', &quot;^metrics.&quot;, NULL, 0}, // 644
+<span class="lineNum">     119 </span>            :         {'F', &quot;^mdws.&quot;, NULL, 0}, // 193
+<span class="lineNum">     120 </span>            :         {'F', &quot;^srepdata.&quot;, NULL, 0}, // 200
+<span class="lineNum">     121 </span>            :         {'F', &quot;^marketing.net.&quot;,NULL,  0}, // 66
+<span class="lineNum">     122 </span>            :         {'F', &quot;.ati-host.net.&quot;, NULL, 0},  // 91
+<span class="lineNum">     123 </span>            :         {'F', &quot;^sadbmetrics.&quot;, NULL, 0}, // 67
+<span class="lineNum">     124 </span>            :         {'F', &quot;^somni.&quot;, NULL, 0}, // 198
+<span class="lineNum">     125 </span>            :         {'F', &quot;^srepdata,&quot;, NULL, 0}, //198
+<span class="lineNum">     126 </span>            :         {'F', &quot;^sstats.&quot;, NULL, 0}, // 339
+<span class="lineNum">     127 </span>            :         {'F', &quot;^sw88.&quot;, NULL, 0}, // 63
+<span class="lineNum">     128 </span>            :         {'F', &quot;^tk.airfrance.&quot;, NULL, 0}, // 98
+<span class="lineNum">     129 </span>            :         {0, NULL, NULL, 0}      // last entry
+<span class="lineNum">     130 </span>            : };
+<span class="lineNum">     131 </span>            : 
+<span class="lineNum">     132 </span>            : typedef struct hash_entry_t {
+<span class="lineNum">     133 </span>            :         struct hash_entry_t *next;
+<span class="lineNum">     134 </span>            :         char label;
+<span class="lineNum">     135 </span>            :         unsigned short hash2;
+<span class="lineNum">     136 </span>            :         char *name;
+<span class="lineNum">     137 </span>            : } HashEntry;
 <span class="lineNum">     138 </span>            : 
-<span class="lineNum">     139 </span>            : typedef struct hash_entry_t {
-<span class="lineNum">     140 </span>            :         struct hash_entry_t *next;
-<span class="lineNum">     141 </span>            :         char label;
-<span class="lineNum">     142 </span>            :         char *name;
-<span class="lineNum">     143 </span>            : } HashEntry;
+<span class="lineNum">     139 </span>            : #define MAX_HASH_ARRAY 32768
+<a name="140"><span class="lineNum">     140 </span>            : static HashEntry *blist[MAX_HASH_ARRAY];</a>
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span><span class="lineCov">        184 : void filter_init(void) {</span>
+<span class="lineNum">     143 </span><span class="lineCov">        184 :         int i = 0;</span>
 <span class="lineNum">     144 </span>            : 
-<span class="lineNum">     145 </span>            : #define MAX_HASH_ARRAY 32768
-<a name="146"><span class="lineNum">     146 </span>            : static HashEntry *blist[MAX_HASH_ARRAY];</a>
-<span class="lineNum">     147 </span>            : 
-<span class="lineNum">     148 </span><span class="lineCov">        167 : void filter_init(void) {</span>
-<span class="lineNum">     149 </span><span class="lineCov">        167 :         int i = 0;</span>
-<span class="lineNum">     150 </span>            : 
-<span class="lineNum">     151 </span><span class="lineCov">      10020 :         while (default_filter[i].name != NULL) {</span>
-<span class="lineNum">     152 </span><span class="lineCov">       9853 :                 int offset = 0;</span>
-<span class="lineNum">     153 </span><span class="lineCov">       9853 :                 if (*default_filter[i].name == '^' || *default_filter[i].name == '$')</span>
-<span class="lineNum">     154 </span><span class="lineCov">       6680 :                         offset = 1;</span>
-<span class="lineNum">     155 </span><span class="lineCov">       9853 :                 default_filter[i].len = strlen(default_filter[i].name + offset);</span>
-<span class="lineNum">     156 </span><span class="lineCov">       9853 :                 i++;</span>
-<span class="lineNum">     157 </span>            :         }
-<span class="lineNum">     158 </span><span class="lineCov">        167 :         memset(&amp;blist[0], 0, sizeof(blist));</span>
-<a name="159"><span class="lineNum">     159 </span><span class="lineCov">        167 : }</span></a>
-<span class="lineNum">     160 </span>            : 
-<span class="lineNum">     161 </span><span class="lineCov">          4 : void filter_postinit(void) {</span>
-<span class="lineNum">     162 </span><span class="lineCov">          4 :         int i = 0;</span>
-<span class="lineNum">     163 </span>            : 
-<span class="lineNum">     164 </span>            :         // --allow-local-doh: move the NULL entry up
-<span class="lineNum">     165 </span><span class="lineCov">          4 :         if (arg_allow_local_doh) {</span>
-<span class="lineNum">     166 </span><span class="lineCov">        224 :                 while (default_filter[i].label != 'D' &amp;&amp; default_filter[i].label != 0)</span>
-<span class="lineNum">     167 </span><span class="lineCov">        220 :                         i++;</span>
-<span class="lineNum">     168 </span><span class="lineCov">          4 :                 assert(default_filter[i].label == 'D');</span>
-<span class="lineNum">     169 </span><span class="lineCov">          4 :                 default_filter[i].label = 0;</span>
-<span class="lineNum">     170 </span><span class="lineCov">          4 :                 default_filter[i].name = NULL;</span>
-<span class="lineNum">     171 </span>            :         }
-<span class="lineNum">     172 </span><span class="lineCov">          4 : }</span>
-<a name="173"><span class="lineNum">     173 </span>            : </a>
-<span class="lineNum">     174 </span>            : // djb2 hash function by Dan Bernstein
-<span class="lineNum">     175 </span><span class="lineCov">   23411443 : static inline int hash(const char *str) {</span>
-<span class="lineNum">     176 </span><span class="lineCov">   23411443 :         uint32_t hash = 5381;</span>
-<span class="lineNum">     177 </span>            :         int c;
-<span class="lineNum">     178 </span>            : 
-<span class="lineNum">     179 </span><span class="lineCov">  302695060 :         while ((c = *str++) != '\0')</span>
-<span class="lineNum">     180 </span><span class="lineCov">  279283617 :                 hash = ((hash &lt;&lt; 5) + hash) ^ c; // hash * 33 ^ c</span>
+<span class="lineNum">     145 </span><span class="lineCov">      10672 :         while (default_filter[i].name != NULL) {</span>
+<span class="lineNum">     146 </span><span class="lineCov">      10488 :                 int offset = 0;</span>
+<span class="lineNum">     147 </span><span class="lineCov">      10488 :                 if (*default_filter[i].name == '^' || *default_filter[i].name == '$')</span>
+<span class="lineNum">     148 </span><span class="lineCov">       6992 :                         offset = 1;</span>
+<span class="lineNum">     149 </span><span class="lineCov">      10488 :                 default_filter[i].len = strlen(default_filter[i].name + offset);</span>
+<span class="lineNum">     150 </span><span class="lineCov">      10488 :                 i++;</span>
+<span class="lineNum">     151 </span>            :         }
+<span class="lineNum">     152 </span><span class="lineCov">        184 :         memset(&amp;blist[0], 0, sizeof(blist));</span>
+<span class="lineNum">     153 </span><span class="lineCov">        184 : }</span>
+<a name="154"><span class="lineNum">     154 </span>            : </a>
+<span class="lineNum">     155 </span>            : // djb2 hash function by Dan Bernstein
+<span class="lineNum">     156 </span><span class="lineCov">   26466887 : static inline int hash(const char *str, unsigned short *hash2) {</span>
+<span class="lineNum">     157 </span><span class="lineCov">   26466887 :         uint32_t hash = 5381;</span>
+<span class="lineNum">     158 </span>            :         int c;
+<span class="lineNum">     159 </span>            : 
+<span class="lineNum">     160 </span><span class="lineCov">  343318215 :         while ((c = *str++) != '\0')</span>
+<span class="lineNum">     161 </span><span class="lineCov">  316851328 :                 hash = ((hash &lt;&lt; 5) + hash) ^ c; // hash * 33 ^ c</span>
+<span class="lineNum">     162 </span>            : 
+<span class="lineNum">     163 </span><span class="lineCov">   26466887 :         *hash2 = hash % 39119;</span>
+<span class="lineNum">     164 </span><span class="lineCov">   26466887 :         return (int) (hash &amp; (MAX_HASH_ARRAY - 1));</span>
+<a name="165"><span class="lineNum">     165 </span>            : }</a>
+<span class="lineNum">     166 </span>            : 
+<span class="lineNum">     167 </span><span class="lineCov">    7408738 : void filter_add(char label, const char *domain) {</span>
+<span class="lineNum">     168 </span><span class="lineCov">    7408738 :         assert(domain);</span>
+<span class="lineNum">     169 </span><span class="lineCov">    7408738 :         if (strlen(domain) &lt; 4) {</span>
+<span class="lineNum">     170 </span><span class="lineNoCov">          0 :                 fprintf(stderr, &quot;Warning: not installing \&quot;%s\&quot; as a %s filter. This could be a full top domain.\n&quot;, domain, label2str(label));</span>
+<span class="lineNum">     171 </span><span class="lineNoCov">          0 :                 return;</span>
+<span class="lineNum">     172 </span>            :         }
+<span class="lineNum">     173 </span>            : 
+<span class="lineNum">     174 </span><span class="lineCov">    7408738 :         HashEntry *h = malloc(sizeof(HashEntry));</span>
+<span class="lineNum">     175 </span><span class="lineCov">    7408738 :         if (!h)</span>
+<span class="lineNum">     176 </span><span class="lineNoCov">          0 :                 errExit(&quot;malloc&quot;);</span>
+<span class="lineNum">     177 </span><span class="lineCov">    7408738 :         h-&gt;label = label;</span>
+<span class="lineNum">     178 </span><span class="lineCov">    7408738 :         h-&gt;name = strdup(domain);</span>
+<span class="lineNum">     179 </span><span class="lineCov">    7408738 :         if (!h-&gt;name)</span>
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :                 errExit(&quot;strdup&quot;);</span>
 <span class="lineNum">     181 </span>            : 
-<span class="lineNum">     182 </span><span class="lineCov">   23411443 :         return (int) (hash &amp; (MAX_HASH_ARRAY - 1));</span>
-<a name="183"><span class="lineNum">     183 </span>            : }</a>
-<span class="lineNum">     184 </span>            : 
-<span class="lineNum">     185 </span><span class="lineCov">    6632536 : void filter_add(char label, const char *domain) {</span>
-<span class="lineNum">     186 </span><span class="lineCov">    6632536 :         assert(domain);</span>
-<span class="lineNum">     187 </span><span class="lineCov">    6632536 :         HashEntry *h = malloc(sizeof(HashEntry));</span>
-<span class="lineNum">     188 </span><span class="lineCov">    6632536 :         if (!h)</span>
-<span class="lineNum">     189 </span><span class="lineNoCov">          0 :                 errExit(&quot;malloc&quot;);</span>
-<span class="lineNum">     190 </span><span class="lineCov">    6632536 :         h-&gt;label = label;</span>
-<span class="lineNum">     191 </span><span class="lineCov">    6632536 :         h-&gt;name = strdup(domain);</span>
-<span class="lineNum">     192 </span><span class="lineCov">    6632536 :         if (!h-&gt;name)</span>
-<span class="lineNum">     193 </span><span class="lineNoCov">          0 :                 errExit(&quot;strdup&quot;);</span>
-<span class="lineNum">     194 </span>            : 
-<span class="lineNum">     195 </span><span class="lineCov">    6632536 :         int hval = hash(domain);</span>
-<span class="lineNum">     196 </span><span class="lineCov">    6632536 :         assert(hval &lt; MAX_HASH_ARRAY);</span>
-<span class="lineNum">     197 </span><span class="lineCov">    6632536 :         h-&gt;next = blist[hval];</span>
-<span class="lineNum">     198 </span><span class="lineCov">    6632536 :         blist[hval] = h;</span>
+<span class="lineNum">     182 </span><span class="lineCov">    7408738 :         int hval = hash(domain, &amp;h-&gt;hash2);</span>
+<span class="lineNum">     183 </span><span class="lineCov">    7408738 :         assert(hval &lt; MAX_HASH_ARRAY);</span>
+<span class="lineNum">     184 </span><span class="lineCov">    7408738 :         h-&gt;next = blist[hval];</span>
+<span class="lineNum">     185 </span><span class="lineCov">    7408738 :         blist[hval] = h;</span>
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     188 </span>            :         stats_mem += sizeof(HashEntry) + strlen(domain) + 1;
+<span class="lineNum">     189 </span>            :         stats_entries++;
+<span class="lineNum">     190 </span>            : #endif
+<a name="191"><span class="lineNum">     191 </span>            : }</a>
+<span class="lineNum">     192 </span>            : 
+<span class="lineNum">     193 </span><span class="lineCov">   19058149 : static HashEntry *filter_search(const char *domain) {</span>
+<span class="lineNum">     194 </span><span class="lineCov">   19058149 :         assert(domain);</span>
+<span class="lineNum">     195 </span>            :         unsigned short hash2;
+<span class="lineNum">     196 </span><span class="lineCov">   19058149 :         int hval = hash(domain, &amp;hash2);</span>
+<span class="lineNum">     197 </span><span class="lineCov">   19058149 :         assert(hval &lt; MAX_HASH_ARRAY);</span>
+<span class="lineNum">     198 </span><span class="lineCov">   19058149 :         HashEntry *ptr = blist[hval];</span>
 <span class="lineNum">     199 </span>            : 
-<span class="lineNum">     200 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">     201 </span>            :         smem += sizeof(HashEntry) + strlen(domain) + 1;
-<span class="lineNum">     202 </span>            :         sentries++;
-<span class="lineNum">     203 </span>            : #endif
-<a name="204"><span class="lineNum">     204 </span><span class="lineCov">    6632536 : }</span></a>
-<span class="lineNum">     205 </span>            : 
-<span class="lineNum">     206 </span><span class="lineCov">   16778907 : static HashEntry *filter_search(const char *domain) {</span>
-<span class="lineNum">     207 </span><span class="lineCov">   16778907 :         assert(domain);</span>
-<span class="lineNum">     208 </span><span class="lineCov">   16778907 :         int hval = hash(domain);</span>
-<span class="lineNum">     209 </span><span class="lineCov">   16778907 :         assert(hval &lt; MAX_HASH_ARRAY);</span>
-<span class="lineNum">     210 </span><span class="lineCov">   16778907 :         HashEntry *ptr = blist[hval];</span>
-<span class="lineNum">     211 </span>            : 
-<span class="lineNum">     212 </span><span class="lineCov">   35694132 :         while (ptr) {</span>
-<span class="lineNum">     213 </span><span class="lineCov">   18933080 :                 if (strcmp(domain, ptr-&gt;name) == 0)</span>
-<span class="lineNum">     214 </span><span class="lineCov">      17855 :                         return ptr; // found</span>
-<span class="lineNum">     215 </span><span class="lineCov">   18915225 :                 ptr = ptr-&gt;next;</span>
-<span class="lineNum">     216 </span>            :         }
-<span class="lineNum">     217 </span>            : 
-<span class="lineNum">     218 </span><span class="lineCov">   16761052 :         return NULL; // not found</span>
-<span class="lineNum">     219 </span>            : }
-<a name="220"><span class="lineNum">     220 </span>            : </a>
+<span class="lineNum">     200 </span><span class="lineCov">   40472978 :         while (ptr) {</span>
+<span class="lineNum">     201 </span><span class="lineCov">   21568674 :                 if (hash2 == ptr-&gt;hash2) {</span>
+<span class="lineNum">     202 </span><span class="lineCov">     154029 :                         if (strcmp(domain, ptr-&gt;name) == 0)</span>
+<span class="lineNum">     203 </span><span class="lineCov">     153845 :                                 return ptr; // found</span>
+<span class="lineNum">     204 </span>            :                 }
+<span class="lineNum">     205 </span><span class="lineCov">   21414829 :                 ptr = ptr-&gt;next;</span>
+<span class="lineNum">     206 </span>            :         }
+<span class="lineNum">     207 </span>            : 
+<span class="lineNum">     208 </span><span class="lineCov">   18904304 :         return NULL; // not found</span>
+<a name="209"><span class="lineNum">     209 </span>            : }</a>
+<span class="lineNum">     210 </span>            : 
+<span class="lineNum">     211 </span><span class="lineCov">        915 : void filter_serach_add(char label, const char *domain) {</span>
+<span class="lineNum">     212 </span><span class="lineCov">        915 :         if (!filter_search(domain))</span>
+<span class="lineNum">     213 </span><span class="lineCov">        714 :                 filter_add(label, domain);</span>
+<a name="214"><span class="lineNum">     214 </span><span class="lineCov">        915 : }</span></a>
+<span class="lineNum">     215 </span>            : 
+<span class="lineNum">     216 </span><span class="lineCov">        460 : static void filter_load_list(char label, const char *fname, int store) {</span>
+<span class="lineNum">     217 </span><span class="lineCov">        460 :         assert(fname);</span>
+<span class="lineNum">     218 </span><span class="lineCov">        460 :         FILE *fp = fopen(fname, &quot;r&quot;);</span>
+<span class="lineNum">     219 </span><span class="lineCov">        460 :         if (!fp)</span>
+<span class="lineNum">     220 </span><span class="lineNoCov">          0 :                 return;  // nothing to do</span>
 <span class="lineNum">     221 </span>            : 
-<span class="lineNum">     222 </span><span class="lineCov">        567 : static void filter_load_list(char label, const char *fname) {</span>
-<span class="lineNum">     223 </span><span class="lineCov">        567 :         assert(fname);</span>
-<span class="lineNum">     224 </span><span class="lineCov">        567 :         FILE *fp = fopen(fname, &quot;r&quot;);</span>
-<span class="lineNum">     225 </span><span class="lineCov">        567 :         if (!fp)</span>
-<span class="lineNum">     226 </span><span class="lineCov">         95 :                 return;  // nothing to do</span>
-<span class="lineNum">     227 </span>            : 
-<span class="lineNum">     228 </span><span class="lineCov">        472 :         int test_hosts = 0;</span>
-<span class="lineNum">     229 </span><span class="lineCov">        472 :         if (arg_test_hosts &amp;&amp; strcmp(fname,PATH_ETC_HOSTS_LIST) == 0)</span>
-<span class="lineNum">     230 </span><span class="lineNoCov">          0 :                 test_hosts = 1;</span>
-<span class="lineNum">     231 </span>            : 
-<span class="lineNum">     232 </span>            :         char buf[MAXBUF];
-<span class="lineNum">     233 </span><span class="lineCov">        472 :         int cnt = 0;</span>
-<span class="lineNum">     234 </span><span class="lineCov">    6650089 :         while (fgets(buf, MAXBUF, fp)) {</span>
-<span class="lineNum">     235 </span>            :                 // remove \n
-<span class="lineNum">     236 </span><span class="lineCov">    6649617 :                 char *ptr = strstr(buf, &quot;\n&quot;);</span>
-<span class="lineNum">     237 </span><span class="lineCov">    6649617 :                 if (ptr)</span>
-<span class="lineNum">     238 </span><span class="lineCov">    6649617 :                         *ptr = '\0';</span>
-<span class="lineNum">     239 </span>            : 
-<span class="lineNum">     240 </span>            :                 // comments, empty lines
-<span class="lineNum">     241 </span><span class="lineCov">    6649617 :                 if (*buf == '#' || *buf == '\0' || strspn(buf, &quot; \t&quot;) == strlen(buf))</span>
-<span class="lineNum">     242 </span><span class="lineCov">       5599 :                         continue;</span>
-<span class="lineNum">     243 </span>            : 
-<span class="lineNum">     244 </span><span class="lineCov">    6644018 :                 ptr =strchr(buf, '#');</span>
-<span class="lineNum">     245 </span><span class="lineCov">    6644018 :                 if (ptr)</span>
-<span class="lineNum">     246 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
-<span class="lineNum">     247 </span>            : 
-<span class="lineNum">     248 </span>            :                 // remove blanks
-<span class="lineNum">     249 </span><span class="lineCov">    6644018 :                 ptr = buf;</span>
-<span class="lineNum">     250 </span><span class="lineCov">    6644018 :                 while (*ptr == ' ' || *ptr == '\t')</span>
-<span class="lineNum">     251 </span><span class="lineNoCov">          0 :                         ptr++;</span>
-<span class="lineNum">     252 </span>            : 
-<span class="lineNum">     253 </span>            :                 // adding lines starting with 0.0.0.0 or 127.0.0.1
-<span class="lineNum">     254 </span><span class="lineCov">    6644018 :                 if (strncmp(ptr, &quot;0.0.0.0&quot;, 7) == 0)</span>
-<span class="lineNum">     255 </span><span class="lineNoCov">          0 :                         ptr += 7;</span>
-<span class="lineNum">     256 </span><span class="lineCov">    6644018 :                 else if (strncmp(ptr, &quot;127.0.0.1&quot;, 9) == 0)</span>
-<span class="lineNum">     257 </span><span class="lineCov">    6644018 :                         ptr += 9;</span>
-<span class="lineNum">     258 </span>            :                 else
-<span class="lineNum">     259 </span><span class="lineNoCov">          0 :                         continue;</span>
-<span class="lineNum">     260 </span>            : 
-<span class="lineNum">     261 </span>            : 
-<span class="lineNum">     262 </span>            :                 // remove localhost etc
-<span class="lineNum">     263 </span><span class="lineCov">    6644018 :                 if (strstr(ptr, &quot;local&quot;))</span>
-<span class="lineNum">     264 </span><span class="lineCov">         95 :                         continue;</span>
-<span class="lineNum">     265 </span>            : 
-<span class="lineNum">     266 </span>            :                 // remove blanks
-<span class="lineNum">     267 </span><span class="lineCov">   13287846 :                 while (*ptr == ' ' || *ptr == '\t')</span>
-<span class="lineNum">     268 </span><span class="lineCov">    6643923 :                         ptr++;</span>
-<span class="lineNum">     269 </span><span class="lineCov">    6643923 :                 char *ptr2 = strchr(ptr, ' ');</span>
-<span class="lineNum">     270 </span><span class="lineCov">    6643923 :                 if (ptr2)</span>
-<span class="lineNum">     271 </span><span class="lineNoCov">          0 :                         *ptr2 = '\0';</span>
-<span class="lineNum">     272 </span><span class="lineCov">    6643923 :                 ptr2 = strchr(ptr, '\t');</span>
-<span class="lineNum">     273 </span><span class="lineCov">    6643923 :                 if (ptr2)</span>
-<span class="lineNum">     274 </span><span class="lineNoCov">          0 :                         *ptr2 = '\0';</span>
-<span class="lineNum">     275 </span>            : 
-<span class="lineNum">     276 </span>            :                 // add it to the hash table
-<span class="lineNum">     277 </span><span class="lineCov">    6643923 :                 if (!filter_blocked(ptr, 0)) {</span>
-<span class="lineNum">     278 </span><span class="lineCov">    6622462 :                         if (test_hosts) {</span>
-<span class="lineNum">     279 </span>            :                                 // if the name starts in www,. remove it
-<span class="lineNum">     280 </span><span class="lineNoCov">          0 :                                 if (strncmp(ptr, &quot;www.&quot;, 4) == 0)</span>
-<span class="lineNum">     281 </span><span class="lineNoCov">          0 :                                         ptr += 4;</span>
-<span class="lineNum">     282 </span><span class="lineNoCov">          0 :                                 printf(&quot;127.0.0.1 %s\n&quot;, ptr);</span>
-<span class="lineNum">     283 </span>            :                         }
-<span class="lineNum">     284 </span><span class="lineCov">    6622462 :                         filter_add(label, ptr);</span>
-<span class="lineNum">     285 </span><span class="lineCov">    6622462 :                         cnt++;</span>
-<span class="lineNum">     286 </span>            :                 }
-<span class="lineNum">     287 </span>            :         }
-<span class="lineNum">     288 </span><span class="lineCov">        472 :         fclose(fp);</span>
-<span class="lineNum">     289 </span>            : 
-<span class="lineNum">     290 </span><span class="lineCov">        472 :         if (arg_id == 0)</span>
-<span class="lineNum">     291 </span><span class="lineCov">        134 :                 printf(&quot;%d filter entries added from %s\n&quot;, cnt, fname);</span>
-<a name="292"><span class="lineNum">     292 </span>            : }</a>
-<span class="lineNum">     293 </span>            : 
-<span class="lineNum">     294 </span><span class="lineCov">         95 : void filter_load_all_lists(void) {</span>
-<span class="lineNum">     295 </span><span class="lineCov">         95 :         filter_load_list('T', PATH_ETC_TRACKERS_LIST);</span>
-<span class="lineNum">     296 </span><span class="lineCov">         95 :         filter_load_list('F', PATH_ETC_FP_TRACKERS_LIST);</span>
-<span class="lineNum">     297 </span><span class="lineCov">         95 :         filter_load_list('A', PATH_ETC_ADBLOCKER_LIST);</span>
-<span class="lineNum">     298 </span><span class="lineCov">         95 :         filter_load_list('M', PATH_ETC_COINBLOCKER_LIST);</span>
-<span class="lineNum">     299 </span><span class="lineCov">         95 :         if (!arg_allow_local_doh)</span>
-<span class="lineNum">     300 </span><span class="lineCov">         92 :                 filter_load_list('D', PATH_ETC_DOH_LIST);</span>
-<span class="lineNum">     301 </span><span class="lineCov">         95 :         filter_load_list('H', PATH_ETC_HOSTS_LIST);</span>
-<span class="lineNum">     302 </span><span class="lineCov">         95 : }</span>
-<span class="lineNum">     303 </span>            : 
-<a name="304"><span class="lineNum">     304 </span>            : #define MAX_DOMAINS 64</a>
-<span class="lineNum">     305 </span>            : static const char *domain[MAX_DOMAINS];
-<span class="lineNum">     306 </span><span class="lineCov">    6640341 : static int extract_domains(const char *ptr) {</span>
-<span class="lineNum">     307 </span><span class="lineCov">    6640341 :         assert(ptr);</span>
-<span class="lineNum">     308 </span>            : 
-<span class="lineNum">     309 </span><span class="lineCov">    6640341 :         domain[0] = ptr;</span>
-<span class="lineNum">     310 </span><span class="lineCov">    6640341 :         int i = 1;</span>
-<span class="lineNum">     311 </span>            : 
-<span class="lineNum">     312 </span><span class="lineCov">  115393167 :         while (*ptr) {</span>
-<span class="lineNum">     313 </span><span class="lineCov">  108752826 :                 if (*ptr == '.') {</span>
-<span class="lineNum">     314 </span><span class="lineCov">   10155571 :                         domain[i] = ptr + 1;</span>
-<span class="lineNum">     315 </span><span class="lineCov">   10155571 :                         if (++i &gt;= MAX_DOMAINS)</span>
-<span class="lineNum">     316 </span><span class="lineNoCov">          0 :                                 return i - 1;</span>
-<span class="lineNum">     317 </span>            :                 }
-<span class="lineNum">     318 </span><span class="lineCov">  108752826 :                 ptr++;</span>
-<span class="lineNum">     319 </span>            :         }
-<span class="lineNum">     320 </span>            : 
-<span class="lineNum">     321 </span><span class="lineCov">    6640341 :         domain[i] = NULL;</span>
-<span class="lineNum">     322 </span><span class="lineCov">    6640341 :         return i - 1;</span>
-<span class="lineNum">     323 </span>            : }
-<a name="324"><span class="lineNum">     324 </span>            : </a>
-<span class="lineNum">     325 </span>            : // return 1 if the site is blocked
-<span class="lineNum">     326 </span><span class="lineCov">    6643955 : const char *filter_blocked(const char *str, int verbose) {</span>
-<span class="lineNum">     327 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">     328 </span>            :         timetrace_start();
-<span class="lineNum">     329 </span>            : #endif
-<span class="lineNum">     330 </span><span class="lineCov">    6643955 :         int dlen = strlen(str); // todo: pass the length as function param</span>
-<span class="lineNum">     331 </span><span class="lineCov">    6643955 :         int i = 0;</span>
+<span class="lineNum">     222 </span><span class="lineCov">        460 :         FILE *fpout = NULL;</span>
+<span class="lineNum">     223 </span><span class="lineCov">        460 :         if (store) {</span>
+<span class="lineNum">     224 </span><span class="lineNoCov">          0 :                 char *f = strrchr(fname, '/');</span>
+<span class="lineNum">     225 </span><span class="lineNoCov">          0 :                 if (!f) {</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :                         fprintf(stderr, &quot;Error: invalid file name %s\n&quot;, fname);</span>
+<span class="lineNum">     227 </span><span class="lineNoCov">          0 :                         exit(1);</span>
+<span class="lineNum">     228 </span>            :                 }
+<span class="lineNum">     229 </span><span class="lineNoCov">          0 :                 f++;</span>
+<span class="lineNum">     230 </span><span class="lineNoCov">          0 :                 fpout = fopen(f, &quot;w&quot;);</span>
+<span class="lineNum">     231 </span><span class="lineNoCov">          0 :                 if (!fpout)</span>
+<span class="lineNum">     232 </span><span class="lineNoCov">          0 :                         errExit(&quot;fopen&quot;);</span>
+<span class="lineNum">     233 </span>            :         }
+<span class="lineNum">     234 </span>            : 
+<span class="lineNum">     235 </span>            :         char buf[MAXBUF];
+<span class="lineNum">     236 </span><span class="lineCov">        460 :         int cnt = 0;</span>
+<span class="lineNum">     237 </span><span class="lineCov">    7577948 :         while (fgets(buf, MAXBUF, fp)) {</span>
+<span class="lineNum">     238 </span>            :                 // remove \n
+<span class="lineNum">     239 </span><span class="lineCov">    7577488 :                 char *ptr = strstr(buf, &quot;\n&quot;);</span>
+<span class="lineNum">     240 </span><span class="lineCov">    7577488 :                 if (ptr)</span>
+<span class="lineNum">     241 </span><span class="lineCov">    7577488 :                         *ptr = '\0';</span>
+<span class="lineNum">     242 </span>            : 
+<span class="lineNum">     243 </span>            :                 // comments, empty lines
+<span class="lineNum">     244 </span><span class="lineCov">    7577488 :                 if (*buf == '#' || *buf == '\0' || strspn(buf, &quot; \t&quot;) == strlen(buf)) {</span>
+<span class="lineNum">     245 </span><span class="lineCov">       4508 :                         if (store)</span>
+<span class="lineNum">     246 </span><span class="lineNoCov">          0 :                                 fprintf(fpout, &quot;%s\n&quot;, buf);</span>
+<span class="lineNum">     247 </span><span class="lineCov">       4508 :                         continue;</span>
+<span class="lineNum">     248 </span>            :                 }
+<span class="lineNum">     249 </span>            : 
+<span class="lineNum">     250 </span><span class="lineCov">    7572980 :                 ptr = strchr(buf, '#');</span>
+<span class="lineNum">     251 </span><span class="lineCov">    7572980 :                 if (ptr)</span>
+<span class="lineNum">     252 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
+<span class="lineNum">     253 </span>            : 
+<span class="lineNum">     254 </span>            :                 // remove blanks
+<span class="lineNum">     255 </span><span class="lineCov">    7572980 :                 ptr = buf;</span>
+<span class="lineNum">     256 </span><span class="lineCov">    7572980 :                 while (*ptr == ' ' || *ptr == '\t')</span>
+<span class="lineNum">     257 </span><span class="lineNoCov">          0 :                         ptr++;</span>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            :                 // adding lines starting with 0.0.0.0 or 127.0.0.1
+<span class="lineNum">     260 </span><span class="lineCov">    7572980 :                 if (strncmp(ptr, &quot;0.0.0.0&quot;, 7) == 0)</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :                         ptr += 7;</span>
+<span class="lineNum">     262 </span><span class="lineCov">    7572980 :                 else if (strncmp(ptr, &quot;127.0.0.1&quot;, 9) == 0)</span>
+<span class="lineNum">     263 </span><span class="lineCov">    7572980 :                         ptr += 9;</span>
+<span class="lineNum">     264 </span>            :                 else
+<span class="lineNum">     265 </span><span class="lineNoCov">          0 :                         continue;</span>
+<span class="lineNum">     266 </span>            : 
+<span class="lineNum">     267 </span>            :                 // remove localhost etc
+<span class="lineNum">     268 </span><span class="lineCov">    7572980 :                 if (strstr(ptr, &quot;local&quot;))</span>
+<span class="lineNum">     269 </span><span class="lineCov">      11316 :                         continue;</span>
+<span class="lineNum">     270 </span>            : 
+<span class="lineNum">     271 </span>            :                 // remove blanks
+<span class="lineNum">     272 </span><span class="lineCov">   15123328 :                 while (*ptr == ' ' || *ptr == '\t')</span>
+<span class="lineNum">     273 </span><span class="lineCov">    7561664 :                         ptr++;</span>
+<span class="lineNum">     274 </span><span class="lineCov">    7561664 :                 char *ptr2 = strchr(ptr, ' ');</span>
+<span class="lineNum">     275 </span><span class="lineCov">    7561664 :                 if (ptr2)</span>
+<span class="lineNum">     276 </span><span class="lineNoCov">          0 :                         *ptr2 = '\0';</span>
+<span class="lineNum">     277 </span><span class="lineCov">    7561664 :                 ptr2 = strchr(ptr, '\t');</span>
+<span class="lineNum">     278 </span><span class="lineCov">    7561664 :                 if (ptr2)</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :                         *ptr2 = '\0';</span>
+<span class="lineNum">     280 </span>            : 
+<span class="lineNum">     281 </span>            :                 // add it to the hash table
+<span class="lineNum">     282 </span><span class="lineCov">    7561664 :                 if (!filter_blocked(ptr, 0)) {</span>
+<span class="lineNum">     283 </span><span class="lineCov">    7408024 :                         if (store)</span>
+<span class="lineNum">     284 </span><span class="lineNoCov">          0 :                                 fprintf(fpout, &quot;127.0.0.1 %s\n&quot;, ptr);</span>
+<span class="lineNum">     285 </span><span class="lineCov">    7408024 :                         filter_add(label, ptr);</span>
+<span class="lineNum">     286 </span><span class="lineCov">    7408024 :                         cnt++;</span>
+<span class="lineNum">     287 </span>            :                 }
+<span class="lineNum">     288 </span>            :         }
+<span class="lineNum">     289 </span><span class="lineCov">        460 :         fclose(fp);</span>
+<span class="lineNum">     290 </span><span class="lineCov">        460 :         if (store)</span>
+<span class="lineNum">     291 </span><span class="lineNoCov">          0 :                 fclose(fpout);</span>
+<span class="lineNum">     292 </span>            : 
+<span class="lineNum">     293 </span><span class="lineCov">        460 :         fflush(0);</span>
+<span class="lineNum">     294 </span><span class="lineCov">        460 :         if (arg_id == 0)</span>
+<span class="lineNum">     295 </span><span class="lineCov">        160 :                 printf(&quot;%d filter entries added from %s\n&quot;, cnt, fname);</span>
+<a name="296"><span class="lineNum">     296 </span>            : }</a>
+<span class="lineNum">     297 </span>            : 
+<span class="lineNum">     298 </span><span class="lineCov">         92 : void filter_load_all_lists(void) {</span>
+<span class="lineNum">     299 </span><span class="lineCov">         92 :         filter_load_list('T', PATH_ETC_TRACKERS_LIST, arg_clean_filters);</span>
+<span class="lineNum">     300 </span><span class="lineCov">         92 :         filter_load_list('F', PATH_ETC_FP_TRACKERS_LIST, arg_clean_filters);</span>
+<span class="lineNum">     301 </span><span class="lineCov">         92 :         filter_load_list('M', PATH_ETC_COINBLOCKER_LIST, arg_clean_filters);</span>
+<span class="lineNum">     302 </span><span class="lineCov">         92 :         filter_load_list('A', PATH_ETC_ADBLOCKER_LIST, arg_clean_filters);</span>
+<span class="lineNum">     303 </span><span class="lineCov">         92 :         filter_load_list('H', PATH_ETC_HOSTS_LIST, arg_clean_filters);</span>
+<span class="lineNum">     304 </span>            : 
+<span class="lineNum">     305 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     306 </span>            :         int max_cnt = 0;
+<span class="lineNum">     307 </span>            :         int i;
+<span class="lineNum">     308 </span>            :         for (i = 0; i &lt; MAX_HASH_ARRAY; i++) {
+<span class="lineNum">     309 </span>            :                 int cnt = 0;
+<span class="lineNum">     310 </span>            :                 HashEntry *ptr = blist[i];
+<span class="lineNum">     311 </span>            :                 while (ptr) {
+<span class="lineNum">     312 </span>            :                         cnt++;
+<span class="lineNum">     313 </span>            :                         ptr = ptr-&gt;next;
+<span class="lineNum">     314 </span>            :                 }
+<span class="lineNum">     315 </span>            : 
+<span class="lineNum">     316 </span>            :                 if (cnt &gt; max_cnt)
+<span class="lineNum">     317 </span>            :                         max_cnt = cnt;
+<span class="lineNum">     318 </span>            :         }
+<span class="lineNum">     319 </span>            : 
+<span class="lineNum">     320 </span>            :         printf(&quot;*** %u filter entries, total memory %u\n&quot;, stats_entries, stats_mem);
+<span class="lineNum">     321 </span>            :         printf(&quot;*** longest filter htable line %d ***\n&quot;, max_cnt);
+<span class="lineNum">     322 </span>            : #endif
+<span class="lineNum">     323 </span><span class="lineCov">         92 : }</span>
+<span class="lineNum">     324 </span>            : 
+<a name="325"><span class="lineNum">     325 </span>            : #define MAX_DOMAINS 64</a>
+<span class="lineNum">     326 </span>            : static const char *domains[MAX_DOMAINS];
+<span class="lineNum">     327 </span><span class="lineCov">    7561696 : static int extract_domains(const char *ptr) {</span>
+<span class="lineNum">     328 </span><span class="lineCov">    7561696 :         assert(ptr);</span>
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span><span class="lineCov">    7561696 :         domains[0] = ptr;</span>
+<span class="lineNum">     331 </span><span class="lineCov">    7561696 :         int i = 1;</span>
 <span class="lineNum">     332 </span>            : 
-<span class="lineNum">     333 </span>            :         // remove &quot;www.&quot;
-<span class="lineNum">     334 </span><span class="lineCov">    6643955 :         if (strncmp(str, &quot;www.&quot;, 4) == 0)</span>
-<span class="lineNum">     335 </span><span class="lineCov">          1 :                 str += 4;</span>
-<span class="lineNum">     336 </span>            : 
-<span class="lineNum">     337 </span>            :         // check the default list
-<span class="lineNum">     338 </span><span class="lineCov">  397655891 :         while (default_filter[i].name != NULL) {</span>
-<span class="lineNum">     339 </span><span class="lineCov">  391015550 :                 if (*default_filter[i].name == '^') {</span>
-<span class="lineNum">     340 </span><span class="lineCov">  185955416 :                         int flen = default_filter[i].len;</span>
-<span class="lineNum">     341 </span><span class="lineCov">  185955416 :                         if (strncmp(str, default_filter[i].name + 1, flen) == 0) {</span>
-<span class="lineNum">     342 </span>            :                                 // handle exceptions
-<span class="lineNum">     343 </span><span class="lineCov">       1520 :                                 if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
-<span class="lineNum">     344 </span><span class="lineNoCov">          0 :                                         break;</span>
-<span class="lineNum">     345 </span><span class="lineCov">       1520 :                                 if (verbose)</span>
-<span class="lineNum">     346 </span><span class="lineNoCov">          0 :                                         printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
-<span class="lineNum">     347 </span><span class="lineCov">       1520 :                                 return label2str(default_filter[i].label);</span>
-<span class="lineNum">     348 </span>            :                         }
-<span class="lineNum">     349 </span>            :                 }
-<span class="lineNum">     350 </span><span class="lineCov">  205060134 :                 else if (*default_filter[i].name == '$') {</span>
-<span class="lineNum">     351 </span><span class="lineCov">   78875031 :                         int flen = default_filter[i].len;</span>
-<span class="lineNum">     352 </span><span class="lineCov">   78875031 :                         if (strcmp(str + dlen - flen, default_filter[i].name + 1) == 0) {</span>
-<span class="lineNum">     353 </span><span class="lineCov">         95 :                                 if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
-<span class="lineNum">     354 </span><span class="lineNoCov">          0 :                                         break;</span>
-<span class="lineNum">     355 </span><span class="lineCov">         95 :                                 if (verbose)</span>
-<span class="lineNum">     356 </span><span class="lineNoCov">          0 :                                         printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
-<span class="lineNum">     357 </span><span class="lineCov">         95 :                                 return label2str(default_filter[i].label);</span>
-<span class="lineNum">     358 </span>            :                         }
-<span class="lineNum">     359 </span>            :                 }
-<span class="lineNum">     360 </span><span class="lineCov">  126185103 :                 else  if (strstr(str, default_filter[i].name)) {</span>
-<span class="lineNum">     361 </span><span class="lineCov">       1999 :                         if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
-<span class="lineNum">     362 </span><span class="lineNoCov">          0 :                                 break;</span>
-<span class="lineNum">     363 </span><span class="lineCov">       1999 :                         if (verbose)</span>
-<span class="lineNum">     364 </span><span class="lineCov">          2 :                                 printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
-<span class="lineNum">     365 </span><span class="lineCov">       1999 :                         return label2str(default_filter[i].label);</span>
-<span class="lineNum">     366 </span>            :                 }
-<span class="lineNum">     367 </span><span class="lineCov">  391011936 :                 i++;</span>
-<span class="lineNum">     368 </span>            :         }
-<span class="lineNum">     369 </span>            : 
-<span class="lineNum">     370 </span>            : 
-<span class="lineNum">     371 </span><span class="lineCov">    6640341 :         int cnt = extract_domains(str);</span>
-<span class="lineNum">     372 </span><span class="lineCov">   23401393 :         for (i = cnt; i &gt;= 0; i--) {</span>
-<span class="lineNum">     373 </span><span class="lineCov">   16778907 :                 HashEntry *ptr = filter_search(domain[i]);</span>
-<span class="lineNum">     374 </span><span class="lineCov">   16778907 :                 if (ptr) {</span>
-<span class="lineNum">     375 </span><span class="lineCov">      17855 :                         if (verbose)</span>
-<span class="lineNum">     376 </span><span class="lineCov">          2 :                                 printf(&quot;URL %s dropped by \&quot;%s\&quot; rule as a %s\n&quot;, str, ptr-&gt;name, label2str(ptr-&gt;label));</span>
-<span class="lineNum">     377 </span><span class="lineCov">      17855 :                         return label2str(ptr-&gt;label);</span>
-<span class="lineNum">     378 </span>            :                 }
-<span class="lineNum">     379 </span>            :         }
-<span class="lineNum">     380 </span>            : 
-<span class="lineNum">     381 </span><span class="lineCov">    6622486 :         if (verbose)</span>
-<span class="lineNum">     382 </span><span class="lineCov">          2 :                 printf(&quot;URL %s is not dropped\n&quot;, str);</span>
-<span class="lineNum">     383 </span>            : 
-<span class="lineNum">     384 </span>            : #ifdef DEBUG_STATS
-<span class="lineNum">     385 </span>            :         stime += timetrace_end();
-<span class="lineNum">     386 </span>            :         scnt++;
-<span class="lineNum">     387 </span>            :         if (scnt &gt;= 20) {
-<span class="lineNum">     388 </span>            :                 printf(&quot;*** filter entries %u, mem %u, access %.03f ms\n&quot;, sentries, smem + (unsigned) sizeof(blist), stime / scnt);
-<span class="lineNum">     389 </span>            :                 fflush(0);
-<span class="lineNum">     390 </span>            :                 stime = 0;
-<span class="lineNum">     391 </span>            :                 scnt = 0;
-<span class="lineNum">     392 </span>            :         }
-<span class="lineNum">     393 </span>            : #endif
-<span class="lineNum">     394 </span>            : 
-<span class="lineNum">     395 </span><span class="lineCov">    6622486 :         return NULL;</span>
-<a name="396"><span class="lineNum">     396 </span>            : }</a>
-<span class="lineNum">     397 </span>            : 
-<span class="lineNum">     398 </span><span class="lineCov">          6 : void filter_test(char *url) {</span>
-<span class="lineNum">     399 </span><span class="lineCov">          6 :         assert(url);</span>
-<span class="lineNum">     400 </span>            : 
-<span class="lineNum">     401 </span><span class="lineCov">          6 :         char *ptr = strtok(url, &quot;,&quot;);</span>
-<span class="lineNum">     402 </span><span class="lineCov">         12 :         while (ptr) {</span>
-<span class="lineNum">     403 </span><span class="lineCov">          6 :                 filter_blocked(ptr, 1);</span>
-<span class="lineNum">     404 </span><span class="lineCov">          6 :                 ptr = strtok(NULL, &quot;,&quot;);</span>
-<span class="lineNum">     405 </span>            :         }
-<a name="406"><span class="lineNum">     406 </span><span class="lineCov">          6 : }</span></a>
-<span class="lineNum">     407 </span>            : 
-<span class="lineNum">     408 </span><span class="lineCov">          1 : void filter_test_list(void) {</span>
-<span class="lineNum">     409 </span>            :         char buf[MAXBUF];
-<span class="lineNum">     410 </span><span class="lineCov">          4 :         while (fgets(buf, MAXBUF, stdin)) {</span>
-<span class="lineNum">     411 </span>            :                 // some basic cleanup
-<span class="lineNum">     412 </span><span class="lineCov">          3 :                 char *ptr = strchr(buf, '\n');</span>
-<span class="lineNum">     413 </span><span class="lineCov">          3 :                 if (ptr)</span>
-<span class="lineNum">     414 </span><span class="lineCov">          3 :                         *ptr = '\0';</span>
-<span class="lineNum">     415 </span>            : 
-<span class="lineNum">     416 </span><span class="lineCov">          3 :                 ptr = buf;</span>
-<span class="lineNum">     417 </span><span class="lineCov">          3 :                 if (*ptr == '\0')</span>
-<span class="lineNum">     418 </span><span class="lineNoCov">          0 :                         continue;</span>
-<span class="lineNum">     419 </span><span class="lineCov">          3 :                 while (*ptr == ' ' || *ptr == '\t')</span>
-<span class="lineNum">     420 </span><span class="lineNoCov">          0 :                         ptr++;</span>
-<span class="lineNum">     421 </span><span class="lineCov">          3 :                 if (*ptr == '\0')</span>
-<span class="lineNum">     422 </span><span class="lineNoCov">          0 :                         continue;</span>
-<span class="lineNum">     423 </span><span class="lineCov">          3 :                 char *start = ptr;</span>
-<span class="lineNum">     424 </span><span class="lineCov">          3 :                 if (*start == '#')      // comments</span>
-<span class="lineNum">     425 </span><span class="lineNoCov">          0 :                         continue;</span>
-<span class="lineNum">     426 </span><span class="lineCov">         47 :                 while (*ptr != '\0') {</span>
-<span class="lineNum">     427 </span><span class="lineCov">         44 :                         if (*ptr == ' ' || *ptr == '\t') {</span>
-<span class="lineNum">     428 </span><span class="lineNoCov">          0 :                                 *ptr = '\0';</span>
-<span class="lineNum">     429 </span><span class="lineNoCov">          0 :                                 break;</span>
-<span class="lineNum">     430 </span>            :                         }
-<span class="lineNum">     431 </span><span class="lineCov">         44 :                         ptr++;</span>
-<span class="lineNum">     432 </span>            :                 }
-<span class="lineNum">     433 </span>            : 
-<span class="lineNum">     434 </span><span class="lineCov">          3 :                 filter_test(start);</span>
-<span class="lineNum">     435 </span>            :         }
-<span class="lineNum">     436 </span><span class="lineCov">          1 : }</span>
-<span class="lineNum">     437 </span>            : 
-<span class="lineNum">     438 </span>            : 
-<span class="lineNum">     439 </span>            : //************************************
-<span class="lineNum">     440 </span>            : // CNAME cloaking based on rx DoH packet
-<span class="lineNum">     441 </span>            : //************************************
-<span class="lineNum">     442 </span>            : static char *fp_block[] = {
-<span class="lineNum">     443 </span>            :         &quot;.eulerian&quot;,          //eulerian.net
-<span class="lineNum">     444 </span>            :         &quot;.at-o&quot;,              //at-o.net
-<span class="lineNum">     445 </span>            :         &quot;.keyade.&quot;,           //k.keyade.com
-<span class="lineNum">     446 </span>            :         &quot;.2o7.&quot;,              //2o7.net
-<span class="lineNum">     447 </span>            :         &quot;.omtrdc.&quot;,           //sc.omtrdc.net
-<span class="lineNum">     448 </span>            :         &quot;.storetail.&quot;,                //storetail.io
-<span class="lineNum">     449 </span>            :         &quot;.dnsdelegation.&quot;,    //dnsdelegation.io
-<span class="lineNum">     450 </span>            :         &quot;.tagcommander.&quot;,     //tagcommander.com
-<span class="lineNum">     451 </span>            :         &quot;.wizaly.&quot;,           //wizaly.com
-<span class="lineNum">     452 </span>            :         &quot;.a88045584548111e997c60ac8a4ec150-1610510072.&quot;,
-<span class="lineNum">     453 </span>            :                 //a88045584548111e997c60ac8a4ec150-1610510072.eu-central-1.elb.amazonaws.com
-<span class="lineNum">     454 </span>            :         &quot;.afc4d9aa2a91d11e997c60ac8a4ec150-2082092489.&quot;,
-<span class="lineNum">     455 </span>            :                 //afc4d9aa2a91d11e997c60ac8a4ec150-2082092489.eu-central-1.elb.amazonaws.com
-<span class="lineNum">     456 </span>            :         &quot;.affex.&quot;,            //affex.org
-<span class="lineNum">     457 </span>            :         &quot;.intentmedia.&quot;,      //partner.intentmedia.net
-<span class="lineNum">     458 </span>            :         &quot;.webtrekk.&quot;, //webtrekk.net
-<span class="lineNum">     459 </span>            :         &quot;.wt-eu02.&quot;,          //wt-eu02.net
-<span class="lineNum">     460 </span>            :         &quot;.oghub.&quot;,            //oghub.io
-<span class="lineNum">     461 </span>            :         NULL
-<span class="lineNum">     462 </span>            : };
-<a name="463"><span class="lineNum">     463 </span>            : </a>
-<span class="lineNum">     464 </span>            : // return -1 if found in the block list, 0 if not found in the block list
-<span class="lineNum">     465 </span><span class="lineCov">          6 : int filter_cname(const char *cname) {</span>
-<span class="lineNum">     466 </span><span class="lineCov">          6 :         assert(cname);</span>
-<span class="lineNum">     467 </span><span class="lineCov">          6 :         int i = 0;</span>
-<span class="lineNum">     468 </span>            : 
-<span class="lineNum">     469 </span><span class="lineCov">        102 :         while (fp_block[i]) {</span>
-<span class="lineNum">     470 </span><span class="lineCov">         96 :                 if (strstr(cname, fp_block[i]))</span>
-<span class="lineNum">     471 </span><span class="lineNoCov">          0 :                         return -1;</span>
-<span class="lineNum">     472 </span><span class="lineCov">         96 :                 i++;</span>
-<span class="lineNum">     473 </span>            :         }
-<span class="lineNum">     474 </span>            : 
-<span class="lineNum">     475 </span><span class="lineCov">          6 :         return 0;</span>
-<span class="lineNum">     476 </span>            : }
+<span class="lineNum">     333 </span><span class="lineCov">  132910935 :         while (*ptr) {</span>
+<span class="lineNum">     334 </span><span class="lineCov">  125349239 :                 if (*ptr == '.') {</span>
+<span class="lineNum">     335 </span><span class="lineCov">   11661690 :                         domains[i] = ptr + 1;</span>
+<span class="lineNum">     336 </span><span class="lineCov">   11661690 :                         if (++i &gt;= MAX_DOMAINS)</span>
+<span class="lineNum">     337 </span><span class="lineNoCov">          0 :                                 return i - 1;</span>
+<span class="lineNum">     338 </span>            :                 }
+<span class="lineNum">     339 </span><span class="lineCov">  125349239 :                 ptr++;</span>
+<span class="lineNum">     340 </span>            :         }
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span><span class="lineCov">    7561696 :         domains[i] = NULL;</span>
+<a name="343"><span class="lineNum">     343 </span><span class="lineCov">    7561696 :         return i - 1;</span></a>
+<span class="lineNum">     344 </span>            : }
+<span class="lineNum">     345 </span><span class="lineCov">    7561696 : void clear_domains(void) {</span>
+<span class="lineNum">     346 </span>            :         int i;
+<span class="lineNum">     347 </span><span class="lineCov">  491510240 :         for (i = 0; i &lt; MAX_DOMAINS; i++)</span>
+<span class="lineNum">     348 </span><span class="lineCov">  483948544 :                 domains[i] = NULL;</span>
+<span class="lineNum">     349 </span><span class="lineCov">    7561696 : }</span>
+<a name="350"><span class="lineNum">     350 </span>            : </a>
+<span class="lineNum">     351 </span>            : // return NULL if the site is not blocked
+<span class="lineNum">     352 </span><span class="lineCov">    7561699 : const char *filter_blocked(const char *str, int verbose) {</span>
+<span class="lineNum">     353 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     354 </span>            :         timetrace_start();
+<span class="lineNum">     355 </span>            : #endif
+<span class="lineNum">     356 </span><span class="lineCov">    7561699 :         int dlen = strlen(str); // todo: pass the length as function param</span>
+<span class="lineNum">     357 </span><span class="lineCov">    7561699 :         int i = 0;</span>
+<span class="lineNum">     358 </span>            : 
+<span class="lineNum">     359 </span>            :         // remove &quot;www.&quot;
+<span class="lineNum">     360 </span><span class="lineCov">    7561699 :         if (strncmp(str, &quot;www.&quot;, 4) == 0)</span>
+<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                 str += 4;</span>
+<span class="lineNum">     362 </span>            : 
+<span class="lineNum">     363 </span>            :         // check the default list
+<span class="lineNum">     364 </span><span class="lineCov">  438578416 :         while (default_filter[i].name != NULL) {</span>
+<span class="lineNum">     365 </span><span class="lineCov">  431016720 :                 if (*default_filter[i].name == '^') {</span>
+<span class="lineNum">     366 </span><span class="lineCov">  219289205 :                         int flen = default_filter[i].len;</span>
+<span class="lineNum">     367 </span><span class="lineCov">  219289205 :                         if (strncmp(str, default_filter[i].name + 1, flen) == 0) {</span>
+<span class="lineNum">     368 </span>            :                                 // handle exceptions
+<span class="lineNum">     369 </span><span class="lineNoCov">          0 :                                 if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
+<span class="lineNum">     370 </span><span class="lineNoCov">          0 :                                         break;</span>
+<span class="lineNum">     371 </span><span class="lineNoCov">          0 :                                 if (verbose)</span>
+<span class="lineNum">     372 </span><span class="lineNoCov">          0 :                                         printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
+<span class="lineNum">     373 </span><span class="lineNoCov">          0 :                                 return label2str(default_filter[i].label);</span>
+<span class="lineNum">     374 </span>            :                         }
+<span class="lineNum">     375 </span>            :                 }
+<span class="lineNum">     376 </span><span class="lineCov">  211727515 :                 else if (*default_filter[i].name == '$') {</span>
+<span class="lineNum">     377 </span><span class="lineCov">   68055288 :                         int flen = default_filter[i].len;</span>
+<span class="lineNum">     378 </span><span class="lineCov">   68055288 :                         if (strcmp(str + dlen - flen, default_filter[i].name + 1) == 0) {</span>
+<span class="lineNum">     379 </span><span class="lineNoCov">          0 :                                 if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
+<span class="lineNum">     380 </span><span class="lineNoCov">          0 :                                         break;</span>
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :                                 if (verbose)</span>
+<span class="lineNum">     382 </span><span class="lineNoCov">          0 :                                         printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
+<span class="lineNum">     383 </span><span class="lineNoCov">          0 :                                 return label2str(default_filter[i].label);</span>
+<span class="lineNum">     384 </span>            :                         }
+<span class="lineNum">     385 </span>            :                 }
+<span class="lineNum">     386 </span><span class="lineCov">  143672227 :                 else  if (strstr(str, default_filter[i].name)) {</span>
+<span class="lineNum">     387 </span><span class="lineCov">          3 :                         if (default_filter[i].exception &amp;&amp; strstr(str, default_filter[i].exception))</span>
+<span class="lineNum">     388 </span><span class="lineNoCov">          0 :                                 break;</span>
+<span class="lineNum">     389 </span><span class="lineCov">          3 :                         if (verbose)</span>
+<span class="lineNum">     390 </span><span class="lineCov">          1 :                                 printf(&quot;URL %s dropped by default rule \&quot;%s\&quot;\n&quot;, str, default_filter[i].name);</span>
+<span class="lineNum">     391 </span><span class="lineCov">          3 :                         return label2str(default_filter[i].label);</span>
+<span class="lineNum">     392 </span>            :                 }
+<span class="lineNum">     393 </span><span class="lineCov">  431016717 :                 i++;</span>
+<span class="lineNum">     394 </span>            :         }
+<span class="lineNum">     395 </span>            : 
+<span class="lineNum">     396 </span>            : 
+<span class="lineNum">     397 </span><span class="lineCov">    7561696 :         int cnt = extract_domains(str);</span>
+<span class="lineNum">     398 </span><span class="lineCov">   26465286 :         for (i = cnt; i &gt;= 0; i--) {</span>
+<span class="lineNum">     399 </span><span class="lineCov">   19057234 :                 HashEntry *ptr = filter_search(domains[i]);</span>
+<span class="lineNum">     400 </span><span class="lineCov">   19057234 :                 if (ptr) {</span>
+<span class="lineNum">     401 </span><span class="lineCov">     153644 :                         clear_domains(); // remove scan-build warnings</span>
+<span class="lineNum">     402 </span><span class="lineCov">     153644 :                         if (verbose)</span>
+<span class="lineNum">     403 </span><span class="lineCov">          1 :                                 printf(&quot;URL %s dropped by \&quot;%s\&quot; rule as a %s\n&quot;, str, ptr-&gt;name, label2str(ptr-&gt;label));</span>
+<span class="lineNum">     404 </span><span class="lineCov">     153644 :                         return label2str(ptr-&gt;label);</span>
+<span class="lineNum">     405 </span>            :                 }
+<span class="lineNum">     406 </span>            :         }
+<span class="lineNum">     407 </span><span class="lineCov">    7408052 :         clear_domains(); // remove scan-build warnings</span>
+<span class="lineNum">     408 </span>            : 
+<span class="lineNum">     409 </span><span class="lineCov">    7408052 :         if (verbose)</span>
+<span class="lineNum">     410 </span><span class="lineCov">          1 :                 printf(&quot;URL %s is not dropped\n&quot;, str);</span>
+<span class="lineNum">     411 </span>            : 
+<span class="lineNum">     412 </span>            : #ifdef DEBUG_STATS
+<span class="lineNum">     413 </span>            :         stats_time += timetrace_end();
+<span class="lineNum">     414 </span>            :         stats_cnt++;
+<span class="lineNum">     415 </span>            :         if (stats_cnt &gt;= 10) {
+<span class="lineNum">     416 </span>            :                 printf(&quot;\n*** average filter access %.03f ms\n\n&quot;, stats_time / stats_cnt);
+<span class="lineNum">     417 </span>            :                 fflush(0);
+<span class="lineNum">     418 </span>            :                 stats_time = 0;
+<span class="lineNum">     419 </span>            :                 stats_cnt = 0;
+<span class="lineNum">     420 </span>            :         }
+<span class="lineNum">     421 </span>            : #endif
+<span class="lineNum">     422 </span>            : 
+<span class="lineNum">     423 </span><span class="lineCov">    7408052 :         return NULL;</span>
+<a name="424"><span class="lineNum">     424 </span>            : }</a>
+<span class="lineNum">     425 </span>            : 
+<span class="lineNum">     426 </span><span class="lineCov">          3 : void filter_test(char *url) {</span>
+<span class="lineNum">     427 </span><span class="lineCov">          3 :         assert(url);</span>
+<span class="lineNum">     428 </span><span class="lineCov">          3 :         filter_blocked(url, 1);</span>
+<span class="lineNum">     429 </span><span class="lineCov">          3 : }</span>
+<span class="lineNum">     430 </span>            : 
+<span class="lineNum">     431 </span>            : 
+<span class="lineNum">     432 </span>            : // supported formats:
+<a name="433"><span class="lineNum">     433 </span>            : //    - lines in regular hosts files with ip addresses of 127.0.0.1 and 0.0.0.0</a>
+<span class="lineNum">     434 </span>            : //    - lists of domain names, one domain per line
+<span class="lineNum">     435 </span><span class="lineCov">          2 : void filter_test_list(void) {</span>
+<span class="lineNum">     436 </span>            :         char buf[MAXBUF];
+<span class="lineNum">     437 </span><span class="lineCov">          4 :         while (fgets(buf, MAXBUF, stdin)) {</span>
+<span class="lineNum">     438 </span><span class="lineCov">          4 :                 char *ptr = strchr(buf, '\n');</span>
+<span class="lineNum">     439 </span><span class="lineCov">          4 :                 if (ptr)</span>
+<span class="lineNum">     440 </span><span class="lineCov">          4 :                         *ptr = '\0';</span>
+<span class="lineNum">     441 </span><span class="lineCov">          4 :                 ptr = buf;</span>
+<span class="lineNum">     442 </span><span class="lineCov">          4 :                 while (*ptr == ' ' || *ptr == '\t')</span>
+<span class="lineNum">     443 </span><span class="lineNoCov">          0 :                         ptr++;</span>
+<span class="lineNum">     444 </span>            : 
+<span class="lineNum">     445 </span>            :                 // comments
+<span class="lineNum">     446 </span><span class="lineCov">          4 :                 char *start = ptr;</span>
+<span class="lineNum">     447 </span><span class="lineCov">          4 :                 if (*start == '#' || *start == '\0') // comment</span>
+<span class="lineNum">     448 </span><span class="lineNoCov">          0 :                         continue;</span>
+<span class="lineNum">     449 </span><span class="lineCov">          4 :                 ptr = strchr(start, '#');</span>
+<span class="lineNum">     450 </span><span class="lineCov">          4 :                 if (ptr)</span>
+<span class="lineNum">     451 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
+<span class="lineNum">     452 </span>            : 
+<span class="lineNum">     453 </span>            :                 // regular hosts files:
+<span class="lineNum">     454 </span>            :                 // 127.0.0.1 domain.name
+<span class="lineNum">     455 </span><span class="lineCov">          4 :                 if (strncmp(start, &quot;127.0.0.1&quot;, 9) == 0)</span>
+<span class="lineNum">     456 </span><span class="lineCov">          2 :                         start += 9;</span>
+<span class="lineNum">     457 </span><span class="lineCov">          2 :                 else if (strncmp(start, &quot;0.0.0.0&quot;, 7) == 0)</span>
+<span class="lineNum">     458 </span><span class="lineNoCov">          0 :                         start += 7;</span>
+<span class="lineNum">     459 </span><span class="lineCov">          6 :                 while (*start == ' ' || *start == '\t')</span>
+<span class="lineNum">     460 </span><span class="lineCov">          2 :                         start++;</span>
+<span class="lineNum">     461 </span>            : 
+<span class="lineNum">     462 </span>            :                 // clean end spaces
+<span class="lineNum">     463 </span><span class="lineCov">          4 :                 ptr = strchr(start, ' ');</span>
+<span class="lineNum">     464 </span><span class="lineCov">          4 :                 if (ptr)</span>
+<span class="lineNum">     465 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
+<span class="lineNum">     466 </span><span class="lineCov">          4 :                 ptr = strchr(start, '\t');</span>
+<span class="lineNum">     467 </span><span class="lineCov">          4 :                 if (ptr)</span>
+<span class="lineNum">     468 </span><span class="lineNoCov">          0 :                         *ptr = '\0';</span>
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span>            :                 // clean www.
+<span class="lineNum">     471 </span><span class="lineCov">          4 :                 if (strncmp(start, &quot;www.&quot;, 4) == 0)</span>
+<span class="lineNum">     472 </span><span class="lineNoCov">          0 :                         start += 4;</span>
+<span class="lineNum">     473 </span><span class="lineCov">          4 :                 if (*start == '\0')</span>
+<span class="lineNum">     474 </span><span class="lineNoCov">          0 :                         continue;</span>
+<span class="lineNum">     475 </span><span class="lineCov">          4 :                 if (strstr(start, &quot;::&quot;)) // IPv6 addresses!</span>
+<span class="lineNum">     476 </span><span class="lineNoCov">          0 :                         continue;</span>
+<span class="lineNum">     477 </span><span class="lineCov">          4 :                 const char *str = filter_blocked(start, 0);</span>
+<span class="lineNum">     478 </span><span class="lineCov">          4 :                 if (!str)</span>
+<span class="lineNum">     479 </span><span class="lineCov">          4 :                         printf(&quot;127.0.0.1 %s\n&quot;, start);</span>
+<span class="lineNum">     480 </span>            : 
+<span class="lineNum">     481 </span>            : #ifdef HAVE_GCOV
+<span class="lineNum">     482 </span><span class="lineCov">          4 :                 __gcov_flush();</span>
+<span class="lineNum">     483 </span>            : #endif
+<span class="lineNum">     484 </span>            :         }
+<span class="lineNum">     485 </span><span class="lineNoCov">          0 : }</span>
+<span class="lineNum">     486 </span>            : 
+<span class="lineNum">     487 </span>            : //************************************
+<span class="lineNum">     488 </span>            : // CNAME cloaking based on rx DoH packet
+<span class="lineNum">     489 </span>            : //************************************
+<span class="lineNum">     490 </span>            : static char *fp_block[] = {
+<span class="lineNum">     491 </span>            :         &quot;.eulerian&quot;,          //eulerian.net
+<span class="lineNum">     492 </span>            :         &quot;.at-o&quot;,              //at-o.net
+<span class="lineNum">     493 </span>            :         &quot;.keyade.&quot;,           //k.keyade.com
+<span class="lineNum">     494 </span>            :         &quot;.2o7.&quot;,              //2o7.net
+<span class="lineNum">     495 </span>            :         &quot;.omtrdc.&quot;,           //sc.omtrdc.net
+<span class="lineNum">     496 </span>            :         &quot;.storetail.&quot;,                //storetail.io
+<span class="lineNum">     497 </span>            :         &quot;.dnsdelegation.&quot;,    //dnsdelegation.io
+<span class="lineNum">     498 </span>            :         &quot;.tagcommander.&quot;,     //tagcommander.com
+<span class="lineNum">     499 </span>            :         &quot;.wizaly.&quot;,           //wizaly.com
+<span class="lineNum">     500 </span>            :         &quot;.a88045584548111e997c60ac8a4ec150-1610510072.&quot;,
+<span class="lineNum">     501 </span>            :                 //a88045584548111e997c60ac8a4ec150-1610510072.eu-central-1.elb.amazonaws.com
+<span class="lineNum">     502 </span>            :         &quot;.afc4d9aa2a91d11e997c60ac8a4ec150-2082092489.&quot;,
+<span class="lineNum">     503 </span>            :                 //afc4d9aa2a91d11e997c60ac8a4ec150-2082092489.eu-central-1.elb.amazonaws.com
+<span class="lineNum">     504 </span>            :         &quot;.affex.&quot;,            //affex.org
+<span class="lineNum">     505 </span>            :         &quot;.intentmedia.&quot;,      //partner.intentmedia.net
+<span class="lineNum">     506 </span>            :         &quot;.webtrekk.&quot;, //webtrekk.net
+<span class="lineNum">     507 </span>            :         &quot;.wt-eu02.&quot;,          //wt-eu02.net
+<span class="lineNum">     508 </span>            :         &quot;.oghub.&quot;,            //oghub.io
+<span class="lineNum">     509 </span>            :         NULL
+<span class="lineNum">     510 </span>            : };
+<a name="511"><span class="lineNum">     511 </span>            : </a>
+<span class="lineNum">     512 </span>            : // return -1 if found in the block list, 0 if not found in the block list
+<span class="lineNum">     513 </span><span class="lineCov">          7 : int filter_cname(const char *cname) {</span>
+<span class="lineNum">     514 </span><span class="lineCov">          7 :         assert(cname);</span>
+<span class="lineNum">     515 </span><span class="lineCov">          7 :         int i = 0;</span>
+<span class="lineNum">     516 </span>            : 
+<span class="lineNum">     517 </span><span class="lineCov">        119 :         while (fp_block[i]) {</span>
+<span class="lineNum">     518 </span><span class="lineCov">        112 :                 if (strstr(cname, fp_block[i]))</span>
+<span class="lineNum">     519 </span><span class="lineNoCov">          0 :                         return -1;</span>
+<span class="lineNum">     520 </span><span class="lineCov">        112 :                 i++;</span>
+<span class="lineNum">     521 </span>            :         }
+<span class="lineNum">     522 </span>            : 
+<span class="lineNum">     523 </span><span class="lineCov">          7 :         return 0;</span>
+<span class="lineNum">     524 </span>            : }
 </pre>
       </td>
     </tr>

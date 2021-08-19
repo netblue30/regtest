@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - gcov-file - fdns/h2frame.h</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">fdns</a> - h2frame.h<span style="font-size: 80%;"> (source / <a href="h2frame.h.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">gcov-file</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">53</td>
+            <td class="headerCovTableEntry">66</td>
+            <td class="headerCovTableEntryMed">80.3 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2021-08-15 11:22:44</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 2019-2021 FDNS Authors
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This file is part of fdns project
+<span class="lineNum">       5 </span>            :  *
+<span class="lineNum">       6 </span>            :  * This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :  * it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :  * the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :  * (at your option) any later version.
+<span class="lineNum">      10 </span>            :  *
+<span class="lineNum">      11 </span>            :  *  This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :  * GNU General Public License for more details.
+<span class="lineNum">      15 </span>            :  *
+<span class="lineNum">      16 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :  * along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : */
+<span class="lineNum">      19 </span>            : 
+<span class="lineNum">      20 </span>            : #ifndef H2FRAME_H
+<span class="lineNum">      21 </span>            : #define H2FRAME_H
+<span class="lineNum">      22 </span>            : #include &quot;fdns.h&quot;
+<span class="lineNum">      23 </span>            : #include &quot;timetrace.h&quot;
+<span class="lineNum">      24 </span>            : 
+<span class="lineNum">      25 </span>            : //
+<span class="lineNum">      26 </span>            : // http2 header definitions
+<span class="lineNum">      27 </span>            : //
+<span class="lineNum">      28 </span>            : typedef struct h2frame_t {
+<span class="lineNum">      29 </span>            :         uint8_t len[3];
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : #define H2_TYPE_DATA            0x00
+<span class="lineNum">      32 </span>            : #define H2_TYPE_HEADERS 0x01
+<span class="lineNum">      33 </span>            : #define H2_TYPE_PRIORITY        0x02
+<span class="lineNum">      34 </span>            : #define H2_TYPE_RESET   0x03
+<span class="lineNum">      35 </span>            : #define H2_TYPE_SETTINGS        0x04
+<span class="lineNum">      36 </span>            : #define H2_TYPE_PUSH_PROMISE    0x05
+<span class="lineNum">      37 </span>            : #define H2_TYPE_PING            0x06
+<span class="lineNum">      38 </span>            : #define H2_TYPE_GOAWAY  0x07
+<span class="lineNum">      39 </span>            : #define H2_TYPE_WIN_UPDATE      0x08
+<span class="lineNum">      40 </span>            : #define H2_TYPE_MAX             0x08 // the last one
+<span class="lineNum">      41 </span>            :         uint8_t type;
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            : #define H2_FLAG_END_STREAM      0x01
+<span class="lineNum">      44 </span>            : #define H2_FLAG_END_HEADERS     0x04
+<span class="lineNum">      45 </span>            : #define H2_FLAG_PADDED  0x08
+<span class="lineNum">      46 </span>            : #define H2_FLAG_PRIORITY        0x20
+<span class="lineNum">      47 </span>            :         uint8_t flag;
+<span class="lineNum">      48 </span>            : 
+<span class="lineNum">      49 </span>            :         uint8_t stream[4];
+<a name="50"><span class="lineNum">      50 </span>            : } H2Frame;</a>
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span><span class="lineCov">        137 : static inline char *h2frame_type2str(uint8_t type) {</span>
+<span class="lineNum">      53 </span><span class="lineCov">        137 :         switch (type) {</span>
+<span class="lineNum">      54 </span><span class="lineCov">         64 :         case H2_TYPE_DATA:</span>
+<span class="lineNum">      55 </span><span class="lineCov">         64 :                 return &quot;DATA&quot;;</span>
+<span class="lineNum">      56 </span><span class="lineCov">         54 :         case H2_TYPE_HEADERS:</span>
+<span class="lineNum">      57 </span><span class="lineCov">         54 :                 return &quot;HEADERS&quot;;</span>
+<span class="lineNum">      58 </span><span class="lineNoCov">          0 :         case H2_TYPE_PRIORITY:</span>
+<span class="lineNum">      59 </span><span class="lineNoCov">          0 :                 return &quot;PRIORITY&quot;;</span>
+<span class="lineNum">      60 </span><span class="lineNoCov">          0 :         case H2_TYPE_RESET:</span>
+<span class="lineNum">      61 </span><span class="lineNoCov">          0 :                 return &quot;RESET&quot;;</span>
+<span class="lineNum">      62 </span><span class="lineCov">         13 :         case H2_TYPE_SETTINGS:</span>
+<span class="lineNum">      63 </span><span class="lineCov">         13 :                 return &quot;SETTINGS&quot;;</span>
+<span class="lineNum">      64 </span><span class="lineNoCov">          0 :         case H2_TYPE_PUSH_PROMISE:</span>
+<span class="lineNum">      65 </span><span class="lineNoCov">          0 :                 return &quot;PUSH-PROMISE&quot;;</span>
+<span class="lineNum">      66 </span><span class="lineNoCov">          0 :         case H2_TYPE_PING:</span>
+<span class="lineNum">      67 </span><span class="lineNoCov">          0 :                 return &quot;PING&quot;;</span>
+<span class="lineNum">      68 </span><span class="lineNoCov">          0 :         case H2_TYPE_GOAWAY:</span>
+<span class="lineNum">      69 </span><span class="lineNoCov">          0 :                 return &quot;GOAWAY&quot;;</span>
+<span class="lineNum">      70 </span><span class="lineCov">          6 :         case H2_TYPE_WIN_UPDATE:</span>
+<span class="lineNum">      71 </span><span class="lineCov">          6 :                 return &quot;WINDOW-UPDATE&quot;;</span>
+<span class="lineNum">      72 </span>            :         };
+<span class="lineNum">      73 </span><span class="lineNoCov">          0 :         return &quot;UNKNOWN&quot;;</span>
+<a name="74"><span class="lineNum">      74 </span>            : }</a>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">        137 : static inline uint32_t h2frame_extract_stream(H2Frame *frm) {</span>
+<span class="lineNum">      77 </span><span class="lineCov">        137 :         uint32_t rv = frm-&gt;stream[0] &lt;&lt; 24 | frm-&gt;stream[1] &lt;&lt; 16 | frm-&gt;stream[2] &lt;&lt; 8 | frm-&gt;stream[3];</span>
+<span class="lineNum">      78 </span><span class="lineCov">        137 :         return rv;</span>
+<a name="79"><span class="lineNum">      79 </span>            : }</a>
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">       2165 : static inline uint32_t h2frame_extract_length(H2Frame *frm) {</span>
+<span class="lineNum">      82 </span><span class="lineCov">       2165 :         uint32_t rv = frm-&gt;len[0] &lt;&lt; 16 | frm-&gt;len[1] &lt;&lt; 8 | frm-&gt;len[2];</span>
+<span class="lineNum">      83 </span><span class="lineCov">       2165 :         return rv;</span>
+<a name="84"><span class="lineNum">      84 </span>            : }</a>
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span><span class="lineCov">        844 : static inline void h2frame_set_stream(H2Frame *frm, uint32_t stream) {</span>
+<span class="lineNum">      87 </span><span class="lineCov">        844 :         frm-&gt;stream[3] = stream &amp; 0xFF;</span>
+<span class="lineNum">      88 </span><span class="lineCov">        844 :         frm-&gt;stream[2] = (stream &gt;&gt; 8) &amp; 0xFF;</span>
+<span class="lineNum">      89 </span><span class="lineCov">        844 :         frm-&gt;stream[1] = (stream &gt;&gt; 16) &amp; 0xFF;</span>
+<span class="lineNum">      90 </span><span class="lineCov">        844 :         frm-&gt;stream[0] = (stream &gt;&gt; 24) &amp; 0x7F;</span>
+<a name="91"><span class="lineNum">      91 </span><span class="lineCov">        844 : }</span></a>
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span><span class="lineCov">        844 : static inline void h2frame_set_length(H2Frame *frm, uint32_t length) {</span>
+<span class="lineNum">      94 </span><span class="lineCov">        844 :         frm-&gt;len[2] = length &amp; 0xFF;</span>
+<span class="lineNum">      95 </span><span class="lineCov">        844 :         frm-&gt;len[1] = (length &gt;&gt; 8) &amp; 0xFF;</span>
+<span class="lineNum">      96 </span><span class="lineCov">        844 :         frm-&gt;len[0]  = (length &gt;&gt; 16) &amp; 0xFF;</span>
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">        844 : }</span></a>
+<span class="lineNum">      98 </span>            : 
+<span class="lineNum">      99 </span><span class="lineCov">        137 : static inline void h2frame_print(int id, const char *direction, H2Frame *frm) {</span>
+<span class="lineNum">     100 </span><span class="lineCov">        137 :         assert(frm);</span>
+<span class="lineNum">     101 </span><span class="lineCov">        137 :         assert(direction);</span>
+<span class="lineNum">     102 </span>            : 
+<span class="lineNum">     103 </span><span class="lineCov">        137 :         uint32_t len = h2frame_extract_length(frm);</span>
+<span class="lineNum">     104 </span><span class="lineCov">        137 :         uint32_t stream = h2frame_extract_stream(frm);</span>
+<span class="lineNum">     105 </span><span class="lineCov">        137 :         print_time();</span>
+<span class="lineNum">     106 </span><span class="lineCov">        137 :         if (frm-&gt;type != H2_TYPE_WIN_UPDATE)</span>
+<span class="lineNum">     107 </span><span class="lineCov">        393 :                 printf(&quot;(%d) h2 %s s %u, len %u, 0x%02u %s, 0x%02u (&quot;,</span>
+<span class="lineNum">     108 </span>            :                        id,
+<span class="lineNum">     109 </span>            :                        direction,
+<span class="lineNum">     110 </span>            :                        stream,
+<span class="lineNum">     111 </span>            :                        len,
+<span class="lineNum">     112 </span><span class="lineCov">        131 :                        frm-&gt;type, h2frame_type2str(frm-&gt;type),</span>
+<span class="lineNum">     113 </span><span class="lineCov">        131 :                        frm-&gt;flag);</span>
+<span class="lineNum">     114 </span>            :         else {
+<span class="lineNum">     115 </span><span class="lineCov">          6 :                 uint8_t *wstart = (uint8_t *) frm + sizeof(H2Frame);</span>
+<span class="lineNum">     116 </span>            :                 uint32_t window;
+<span class="lineNum">     117 </span><span class="lineCov">          6 :                 memcpy(&amp;window, wstart, 4);</span>
+<span class="lineNum">     118 </span><span class="lineCov">          6 :                 window &amp;= 0x7fffffff;</span>
+<span class="lineNum">     119 </span><span class="lineCov">          6 :                 window = ntohl(window);</span>
+<span class="lineNum">     120 </span><span class="lineCov">         18 :                 printf(&quot;(%d) h2 %s s %u, len %u, 0x%02u %s(%d), 0x%02u (&quot;,</span>
+<span class="lineNum">     121 </span>            :                        id,
+<span class="lineNum">     122 </span>            :                        direction,
+<span class="lineNum">     123 </span>            :                        stream,
+<span class="lineNum">     124 </span>            :                        len,
+<span class="lineNum">     125 </span><span class="lineCov">          6 :                        frm-&gt;type, h2frame_type2str(frm-&gt;type), window,</span>
+<span class="lineNum">     126 </span><span class="lineCov">          6 :                        frm-&gt;flag);</span>
+<span class="lineNum">     127 </span>            :         }
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span><span class="lineCov">        137 :         if (frm-&gt;flag &amp; H2_FLAG_END_STREAM)</span>
+<span class="lineNum">     130 </span><span class="lineCov">         61 :                 printf(&quot;end stream,&quot;);</span>
+<span class="lineNum">     131 </span><span class="lineCov">        137 :         if (frm-&gt;flag &amp; H2_FLAG_END_HEADERS)</span>
+<span class="lineNum">     132 </span><span class="lineCov">         54 :                 printf(&quot;end headers,&quot;);</span>
+<span class="lineNum">     133 </span><span class="lineCov">        137 :         if (frm-&gt;flag &amp; H2_FLAG_PADDED)</span>
+<span class="lineNum">     134 </span><span class="lineNoCov">          0 :                 printf(&quot;padded,&quot;);</span>
+<span class="lineNum">     135 </span><span class="lineCov">        137 :         if (frm-&gt;flag &amp; H2_FLAG_PRIORITY)</span>
+<span class="lineNum">     136 </span><span class="lineNoCov">          0 :                 printf(&quot;priority,&quot;);</span>
+<span class="lineNum">     137 </span><span class="lineCov">        137 :         printf(&quot;)\n&quot;);</span>
+<span class="lineNum">     138 </span><span class="lineCov">        137 :         fflush(0);</span>
+<span class="lineNum">     139 </span><span class="lineCov">        137 : }</span>
+<span class="lineNum">     140 </span>            : 
+<span class="lineNum">     141 </span>            : #endif
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
